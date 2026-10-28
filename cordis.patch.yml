@@ -1,0 +1,11 @@
+# dsh-at-plugins —— 挂载声明
+#
+# 装上后 profile 只要在 `dsh.profile.bundles` 里列出本包名即生效。
+# 本地开发：dsh plugin --profile desktop add link:<本目录绝对路径>
+#
+# 🔴 `id` 必须等于 index.js 里的 `export const name`。
+
+- insert:
+    - id: at-plugins
+      name: dsh-at-plugins
+      config: {}

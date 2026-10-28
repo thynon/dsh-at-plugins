@@ -1,0 +1,50 @@
+{
+  "name": "dsh-at-plugins",
+  "version": "0.1.0",
+  "description": "DSH 插件：在输入框 @ 一下就能列出已安装的插件，按系统/用户分组；会话按文件夹归类，分组标题可折叠。",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "mention",
+    "plugin-manager"
+  ],
+  "license": "MIT",
+  "author": "thynon",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "install.mjs",
+    "check.mjs",
+    "README.md",
+    "README.en.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "dsh": ">=0.2.1-rc.3",
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thynon/dsh-at-plugins.git"
+  },
+  "homepage": "https://github.com/thynon/dsh-at-plugins#readme",
+  "bugs": {
+    "url": "https://github.com/thynon/dsh-at-plugins/issues"
+  },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  }
+}
