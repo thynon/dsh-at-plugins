@@ -225,8 +225,6 @@ const DICT = {
   'fold.expand': '展开',
   'empty.title': '还没有可引用的插件',
   'empty.hint': '在「设置 → 插件」里装一个，再回来 @',
-  'empty.query.title': '没有匹配的插件',
-  'empty.query.hint': '继续输入，或按 Esc 关闭',
   'error.title': '读不到',
   'error.hint': '再试',
 }
@@ -346,9 +344,8 @@ ok('中止的查询直接返回空', (await src.candidates({ sessionId: 'current
 const byPackage = await src.candidates({ sessionId: 'current' }, { query: 'dshmarket' })
 ok('按包名也能搜到', byPackage.length === 1 && byPackage[0].name === '插件市场', JSON.stringify(byPackage.map((r) => r.name)))
 const byJson = await src.candidates({ sessionId: 'current' }, { query: 'true' })
-ok('搜索不把 value 里的 JSON 当正文', byJson.length === 1 && byJson[0].name === '没有匹配的插件', JSON.stringify(byJson.map((r) => r.name)))
-ok('无匹配时保留占位行，菜单不自动关', byJson.length === 1 && byJson[0].value === undefined)
-ok('占位行不可插入', src.onPick({ candidate: byJson[0] }) === undefined)
+ok('搜索不把 value 里的 JSON 当正文', byJson.length === 0, JSON.stringify(byJson.map((r) => r.name)))
+ok('无匹配时不返回占位行，交给菜单关闭', byJson.length === 0)
 const disabled = await src.candidates({ sessionId: 'current' }, { query: '未启用' })
 ok('按状态也能搜到未启用', disabled.length === 2 && disabled.every((r) => r.description.includes('未启用')), JSON.stringify(disabled.map((r) => r.name)))
 
@@ -532,7 +529,7 @@ ok('计数由伪元素画', style !== undefined && style.textContent.includes('c
 ok('箭头由伪元素画', style !== undefined && style.textContent.includes('[data-dshatp-foldable="1"]::before'))
 ok('滚动时为吸顶标题留空间', style !== undefined && style.textContent.includes('scroll-margin-top'))
 
-/* 无匹配占位：面板高度锁定，内容居中。 */
+/* 空插件状态：面板高度锁定，内容居中。 */
 const emptyMenu = new FakeEl('div')
 emptyMenu.setAttribute('data-trigger-menu', '')
 emptyMenu._rect = { height: 284, width: 380, top: 100, left: 0, right: 380, bottom: 384 }
@@ -542,15 +539,15 @@ emptyList.setAttribute('role', 'listbox')
 const emptyRow = new FakeEl('button')
 emptyRow.setAttribute('role', 'option')
 emptyRow.setAttribute('id', 'dsh-slash-option-plugins-0')
-emptyRow.textContent = '没有匹配的插件继续输入，或按 Esc 关闭'
+emptyRow.textContent = '还没有可引用的插件在「设置 → 插件」里装一个'
 emptyList.appendChild(emptyRow)
 emptyMenu.appendChild(emptyList)
 menus.push(emptyMenu)
 menuLists.push(emptyList)
 for (const observer of observers) observer.fire()
-ok('无匹配占位打上 empty 标记', emptyList.dataset.dshatpEmpty === '1')
-ok('无匹配面板高度也锁定', emptyMenu.style.minHeight === '284px', emptyMenu.style.minHeight)
-ok('无匹配内容居中', style.textContent.includes('flex:1 1 auto;justify-content:center'))
+ok('空插件状态打上 empty 标记', emptyList.dataset.dshatpEmpty === '1')
+ok('空插件面板高度也锁定', emptyMenu.style.minHeight === '284px', emptyMenu.style.minHeight)
+ok('空插件内容居中', style.textContent.includes('flex:1 1 auto;justify-content:center'))
 
 /* 斜杠菜单不能被误伤：同样的 listbox 结构，但没有 reference/plugins 的 option id。 */
 const slashMenu = new FakeEl('div')

@@ -34,8 +34,6 @@ window.__ModuleLoader__.load({
       'fold.expand': '展开',
       'empty.title': '还没有可引用的插件',
       'empty.hint': '在「设置 → 插件」里装一个，再回来 @',
-      'empty.query.title': '没有匹配的插件',
-      'empty.query.hint': '继续输入，或按 Esc 关闭',
       'error.title': '读不到插件列表',
       'error.hint': '清单服务没响应，稍后再试',
     }
@@ -49,8 +47,6 @@ window.__ModuleLoader__.load({
       'fold.expand': 'Expand',
       'empty.title': 'No plugins to mention yet',
       'empty.hint': 'Install one in Settings → Plugins, then type @ again',
-      'empty.query.title': 'No matching plugins',
-      'empty.query.hint': 'Keep typing, or press Esc to close',
       'error.title': 'Plugin list unavailable',
       'error.hint': 'The inventory service did not answer; try again later',
     }
@@ -451,9 +447,9 @@ window.__ModuleLoader__.load({
 
     /**
      * 把菜单面板的高度锁在它第一次展示候选时的高度。
-     * 菜单是按内容撑高的；从 52 个候选过滤到 1 行「没有匹配」时，
-     * 面板会从 400px 猛缩到 42px，看起来就是整个弹窗在开合。
-     * 锁定后只在面板内部换内容，不改变面板高度。
+     * 菜单是按内容撑高的；从 52 个候选过滤到 3 个时，
+     * 面板会从 284/400px 猛缩到 180px，看起来就是整个弹窗在跳。
+     * 锁定后只在面板内部换内容，不改变面板高度；无匹配时菜单仍按 DSH 规则关闭。
      */
     function freezeMenuHeight(menu, list) {
       if (frozenMenus.has(menu)) {
@@ -626,8 +622,7 @@ window.__ModuleLoader__.load({
     /** 无匹配/空插件时只有一行占位：标记 listbox，CSS 把那行放在面板中间。 */
     function markEmptyState(list, t) {
       const options = [...list.querySelectorAll('[role="option"]')]
-      const empty = options.length === 1
-        && (options[0].textContent.includes(t('empty.query.title')) || options[0].textContent.includes(t('empty.title')))
+      const empty = options.length === 1 && options[0].textContent.includes(t('empty.title'))
       const value = empty ? '1' : ''
       if (list.dataset.dshatpEmpty !== value) {
         if (empty) list.dataset.dshatpEmpty = '1'
@@ -864,14 +859,8 @@ window.__ModuleLoader__.load({
               if (String(query || '').trim() === '') {
                 return [{ name: t('empty.title'), description: t('empty.hint'), icon: PluginGlyph }]
               }
-              /*
-               * 无匹配时也返回一行占位，而不是 []：
-               * 菜单的规则是「所有来源都 ready 且为空就自动关闭」。
-               * 输入法组合期间（比如打 chajian 还没上屏「插件」）会先出现
-               * 一个匹配不到任何东西的查询，返回 [] 会让整个菜单关掉，
-               * 上屏后再重新打开——看起来就是菜单在开合。
-               */
-              return [{ name: t('empty.query.title'), description: t('empty.query.hint'), icon: PluginGlyph }]
+              /* 无匹配就不返回占位行：按 DSH 的规则关闭菜单，不留「没有匹配」提示。 */
+              return []
             } catch (error) {
               console.warn('[dsh-at-plugins] plugin list unavailable:', error && error.message ? error.message : error)
               return [{ name: t('error.title'), description: t('error.hint'), icon: WarningGlyph }]
