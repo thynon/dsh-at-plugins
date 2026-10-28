@@ -4,6 +4,7 @@
  * 这半边只干一件事：告诉模型 `@[标题](dsh-plugin:包名)` 是什么意思。
  * 列表本身由浏览器半端（client.js）从 pluginManager.listBundles 读取。
  * ============================================================================
+ * @license Source-available, noncommercial — see LICENSE. © 2026 thynon
  */
 
 export const name = 'at-plugins'

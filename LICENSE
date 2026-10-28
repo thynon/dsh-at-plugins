@@ -1,21 +1,96 @@
-MIT License
+dsh-at-plugins 使用许可
+License for dsh-at-plugins
 
-Copyright (c) 2026 thynon
+版权所有 © 2026 thynon
+Copyright © 2026 thynon
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+本项目不是 OSI 认可的开源软件，而是「源码可见、非商业使用」的许可。
+This project is not OSI-approved open source. It is source-available, noncommercial software.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+================================================================================
+一、简体中文
+================================================================================
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+【允许】免费且无需申请，你可以：
+
+1. 使用、复制本项目，用于个人学习、研究、自用或所在组织内部的非商业场景；
+2. 修改本项目，创作衍生作品（二次创作）；
+3. 分发你的衍生作品，无论免费或随其它免费项目一起发布。
+
+【必须】在以下条件内进行：
+
+1. 署名
+   任何衍生作品、再分发版本，都必须在源代码中至少保留一处对原作者的署名。
+   推荐直接抄这一行到文件头注释里：
+
+       Based on dsh-at-plugins by thynon — https://github.com/thynon/dsh-at-plugins
+
+   只在 README 或文档里写不算，必须落在代码文件内。
+
+2. 不得收费
+   未经作者事先书面许可，不得将本项目或其任何衍生作品用于收费，包括但不限于：
+   出售、付费下载、付费墙后提供、订阅制、按次／按时计费、打包进付费产品或付费服务。
+
+3. 许可继承
+   衍生作品必须继续沿用本许可，不得改为更宽松的许可（例如不得改回 MIT、Apache-2.0）。
+   你可以在本许可之上附加更严格的条款。
+
+4. 保留声明
+   分发时必须原样保留本 LICENSE 文件，以及源码中已有的版权声明与署名。
+
+【未经许可禁止】商业使用。任何以营利为目的的使用，包括企业内部用于商业生产环境，
+都需要事先取得作者的书面授权。授权联系：https://github.com/thynon
+
+【无担保】
+本软件按「现状」提供，不附带任何明示或默示的担保，包括但不限于适销性、
+特定用途适用性与不侵权的担保。因使用本软件产生的任何直接或间接损失，
+作者不承担任何责任。
+
+================================================================================
+二、English
+================================================================================
+
+[Grant] Free of charge and without asking, you may:
+
+1. Use and copy this project for personal study, research, self-use, or
+   noncommercial use inside your organization;
+2. Modify this project and create derivative works;
+3. Distribute your derivative works, free of charge or alongside other free projects.
+
+[Conditions] Provided that you:
+
+1. Attribution
+   Any derivative work or redistributed copy MUST keep at least one credit to the
+   original author inside the source code. Copy this line into a file header:
+
+       Based on dsh-at-plugins by thynon — https://github.com/thynon/dsh-at-plugins
+
+   A note in the README or documentation alone does not satisfy this; it must live
+   in a code file.
+
+2. No charging
+   You may not charge for this project or any derivative of it without the author's
+   prior written permission. This includes selling, paid downloads, paywalls,
+   subscriptions, per-use or per-time billing, and bundling into a paid product or
+   paid service.
+
+3. Same license
+   Derivative works must remain under this license. You may not relicense them under
+   a more permissive license (for example, you may not switch back to MIT or
+   Apache-2.0). You may add stricter terms on top.
+
+4. Keep the notice
+   Redistributions must retain this LICENSE file unchanged, together with the
+   existing copyright and attribution notices in the source.
+
+[Prohibited without permission] Commercial use. Any profit-oriented use — including
+production use inside a for-profit organization — requires prior written permission
+from the author. Contact: https://github.com/thynon
+
+[No warranty]
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.

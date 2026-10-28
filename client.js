@@ -14,6 +14,7 @@
  *   - 拿不到就安静退出，任何一步失败都不能让菜单打不开。
  *   - 所有改动都登记在 ctx.effect 里，插件卸载后原样还回去。
  * ============================================================================
+ * @license Source-available, noncommercial — see LICENSE. © 2026 thynon
  */
 window.__ModuleLoader__.load({
   id: 'dsh-at-plugins',

@@ -8,7 +8,7 @@
 
 <p align="center">
   <img alt="DeepSeek Harness" src="https://img.shields.io/badge/DSH-%E2%89%A50.2.1--rc.3-4C6EF5">
-  <img alt="License" src="https://img.shields.io/badge/license-MIT-green">
+  <img alt="License" src="https://img.shields.io/badge/license-Source--Available-orange">
   <img alt="Node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
   <a href="https://github.com/thynon/dsh-at-plugins/actions/workflows/check.yml"><img alt="check" src="https://github.com/thynon/dsh-at-plugins/actions/workflows/check.yml/badge.svg"></a>
 </p>
@@ -150,4 +150,11 @@ node check.mjs
 
 ## License
 
-MIT © [thynon](https://github.com/thynon)
+本项目**不是** OSI 认可的开源许可，而是「源码可见、非商业」许可：
+
+- ✅ 可免费使用、修改、二次创作、再分发
+- ✅ 衍生作品必须保留署名——**落在源代码文件里**至少一处，只在 README 写不算
+- ❌ 未经书面许可，不得收费（包括衍生作品的任何收费形式）
+- ❌ 衍生作品不得改成更宽松的许可（不能改回 MIT / Apache-2.0）
+
+完整条款见 [LICENSE](LICENSE)。需要商业授权找 [@thynon](https://github.com/thynon)。

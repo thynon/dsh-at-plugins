@@ -8,7 +8,7 @@ Typing `@` in DSH normally offers files and sessions only. This plugin turns **t
 
 <p align="center">
   <img alt="DeepSeek Harness" src="https://img.shields.io/badge/DSH-%E2%89%A50.2.1--rc.3-4C6EF5">
-  <img alt="License" src="https://img.shields.io/badge/license-MIT-green">
+  <img alt="License" src="https://img.shields.io/badge/license-Source--Available-orange">
   <img alt="Node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
   <a href="https://github.com/thynon/dsh-at-plugins/actions/workflows/check.yml"><img alt="check" src="https://github.com/thynon/dsh-at-plugins/actions/workflows/check.yml/badge.svg"></a>
 </p>
@@ -149,4 +149,11 @@ No browser, no DSH: a tiny React/DOM stand-in runs `client.js` for real — grou
 
 ## License
 
-MIT © [thynon](https://github.com/thynon)
+This is **not** an OSI-approved open-source license. It is source-available, noncommercial:
+
+- ✅ Use, modify, create derivative works, redistribute — free of charge
+- ✅ Derivative works must credit the original author **inside a source file**, not only in the README
+- ❌ No charging without written permission, including for derivative works
+- ❌ Derivative works may not be relicensed under a more permissive license (no switching back to MIT / Apache-2.0)
+
+Full terms in [LICENSE](LICENSE). For commercial licensing, contact [@thynon](https://github.com/thynon).
