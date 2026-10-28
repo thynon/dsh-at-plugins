@@ -2,7 +2,7 @@
 
 [中文](README.md) ｜ **English**
 
-> An `@`-menu upgrade for DeepSeek Harness: plugins grouped into **System / User**, sessions grouped by folder, and foldable section headers.
+> An `@`-menu upgrade for DeepSeek Harness: plugins grouped into **System / User**, sessions grouped by folder, and section headers that stick, count, and fold.
 
 Typing `@` in DSH normally offers files and sessions only. This plugin turns **the plugins you have installed** into a third kind of target, and chops long lists into readable chunks.
 
@@ -22,13 +22,15 @@ Both are real captures of the same `@` menu.
 | ![Before: the @ menu only offers files and sessions](docs/before.png) | ![After: two extra groups, System and User](docs/after.png) |
 | Only "Files & folders" and "Sessions" | Two extra groups, System and User; the System group is folded in this shot |
 
-The "after" capture happens to have the System group folded, which shows the `▾` / `▸` control and what a folded group looks like.
+The "after" capture happens to have the System group folded, which shows what a folded group looks like.
+
+> Both captures are from 0.1.1. 0.1.2 makes headers sticky, adds a row-count badge, and replaces the text chevron with a 24px CSS-drawn button; the grouping itself is unchanged.
 
 ## Why
 
 `@` is the fastest command surface in DSH, but it only knows files and workspace sessions. Once you install a few plugins, "which plugin gives me this feature?" means digging through Settings → Plugins.
 
-So: feed the plugin inventory into `@`, and label where each entry came from — **System** (shipped with the client) and **User** (installed with `dsh plugin add`). Two extra rails for long lists: foldable section headers, and sessions grouped by folder.
+So: feed the plugin inventory into `@`, and label where each entry came from — **System** (shipped with the client) and **User** (installed with `dsh plugin add`). Three extra rails for long lists: sticky counted section headers, foldable groups, and sessions grouped by folder.
 
 ## Features
 
@@ -36,18 +38,25 @@ So: feed the plugin inventory into `@`, and label where each entry came from —
 
 | Signal | Bucket |
 |---|---|
-| `availability === 'installation'` (package lives in the DSH install's `package.json`) | System |
-| `official === true` (official bundled / optional package) | System |
-| Everything else, present only in the profile's `dependencies` | User |
+| `availability === 'installation'` (package lives in the DSH install) | System |
+| `availability === 'profile'` (present only in the profile's `dependencies`, added with `dsh plugin add`) | User |
+
+**`official` is not the System test**: an official optional package installed into your profile still has `official: true`, but it is not in the install directory — from your side it is something you added, so it belongs under User.
 
 System first, User second; enabled entries first within a group, disabled ones carry a "disabled" note.
 System plugins that shipped but are **not enabled** are omitted — `@`-ing them would do nothing.
 
 Data comes from the host's `pluginManager.listBundles`. Read-only: no install, no uninstall, no toggling.
 
+Plugin rows also get a small cleanup:
+
+- `meta.icon` renders as a 14px image (only `data:image/...;base64` is accepted); otherwise a built-in box glyph is used
+- version and description move into the right-hand meta text; descriptions are no longer hard-cut at 42 characters, CSS ellipsis handles the real width
+- disabled rows end with "disabled" and sort last within their group
+
 ### Sessions grouped by folder
 
-Sessions used to sit under a single "Sessions" heading. Now they group by the `cwd` basename:
+Sessions used to sit under a single "Sessions" heading. Now they group by each session's `cwd` folder:
 
 ```
 default-workspace
@@ -58,13 +67,19 @@ Minecraft
 ```
 
 - The folder of the current session comes first, then alphabetical
+- Same-named folders (`~/work/src` and `~/play/src`) no longer merge: the current folder keeps the short name `src`, other collisions add parent segments and show as `play/src`
 - Subagent sessions stay in their own folder, marked "subagent" in the description
 - Sessions the client cannot resolve (other workspaces, deleted ones) fall back to the original "Sessions" group at the end — never dumped into an "Other folders" bucket
 
-### Foldable section headers
+### Section headers: sticky, counted, foldable
 
-Each heading has a `▾` / `▸` on the right; click the chevron or the heading itself to fold the group (buttons appear at 3+ rows). Fold state persists for the window.
-Headings are also a size up (14px / 700, with a divider) to separate them from the 13px rows.
+- **Sticky**: the active group heading stops at the top of the menu while the list scrolls, so a long list never loses "which group am I in"
+- **Count**: a small badge on the right shows how many rows the group has (hidden for single-row groups to cut noise); it still tells you how many were folded away
+- **Fold**: groups with 3+ rows get a 24px chevron button; click the button or the heading itself. The chevron is CSS-drawn, not a font `▾` / `▸`
+- **Accessibility**: the button exposes `aria-expanded` and an "Expand/Collapse + group name" `aria-label`, with a `:focus-visible` ring; both the heading and the button prevent the default `mousedown` so clicking them never blurs the composer
+- **`@` menu only**: identified through `[data-trigger-menu]` plus option-id prefixes, so the slash-command menu and model pickers are left alone
+
+Headings use 14px / 650 with a sticky background and a divider, separating them from the 13px rows. Fold state persists for the window.
 
 ### The plugin reference is an atomic chip
 
@@ -123,21 +138,25 @@ Drop `dsh-at-plugins` from `dsh.profile.bundles` (the dependency line may stay),
 
 | Piece | Mechanism |
 |---|---|
-| Plugin candidates | `inputTriggers.registerSource({ trigger: '@', ... })` |
-| Session grouping | Wraps the `reference` source's `candidates()`; rewrites `section` on `kind: 'session'` rows only, passes file rows through untouched |
-| Fold buttons | `MutationObserver` plus DOM enhancement on `[role="listbox"] > [role="presentation"]` |
+| Plugin candidates | `inputTriggers.registerSource({ trigger: '@', ... })`; `meta.icon` wrapped as a 14px image component |
+| Session grouping | Wraps the `reference` source's `candidates()`; groups by `cwd` (not display name), rewrites `section` on `kind: 'session'` rows only, passes file rows through |
+| Header enhancement | `MutationObserver` plus `[data-trigger-menu]` + option-id prefix detection; wraps `.dshatp-label`, inserts `.dshatp-count` and `.dshatp-fold` |
+| Sticky | `position:sticky` on headings plus `scroll-margin-top` so `scrollIntoView` does not park a row under the heading |
 | Inline chip | Atomic `insert` + `codec` + a `conversation.user.text.node` renderer |
 
-Three traps worth knowing, documented in the code: never read a section name with `textContent` (the fold button's own `▾` becomes part of the name and the fold state can never match); writing an unchanged `data` attribute re-triggers the `MutationObserver` and self-oscillates; the fold button must be restored synchronously, or it flickers on every keystroke.
+Traps worth knowing, documented in the code: never read a section name with `textContent` (the fold button and count badge become part of the name and the fold state can never match); writing an unchanged `data` attribute re-triggers the `MutationObserver` and self-oscillates; the fold button and count must be restored synchronously, or they flicker on every keystroke; a sticky heading covers the `scrollIntoView` target unless you reserve `scroll-margin-top`.
 
 ## Limits
 
-- Only **running** packages are listed (`installed` or `enabled`).
+- Only **running** packages are listed (`installed` or `enabled`); official optional packages that are not installed, shipped-but-disabled system plugins, and plain non-bundle profile dependencies are all omitted.
 - Read-only by design; manage plugins in Settings → Plugins.
 - Plugin inventory is cached for 5 seconds.
-- Folding is **visual**: hidden rows remain in the menu's data model, so arrow keys still traverse them. Enter/Tab on a hidden row is swallowed rather than picking something invisible.
+- Folding is **visual**: hidden rows remain in the menu's data model. When an arrow key lands on a hidden row, the plugin walks in the same direction to the nearest visible row (through the menu's own hover path); Enter/Tab on a hidden row is still swallowed rather than picking something invisible.
+- The fold button itself is a pointer control (focus stays in the composer); keyboard users can arrow past a folded group, but cannot open or close it from the keyboard. If upstream ever exposes a data-level menu filter, this can become a real data fold.
 - Session grouping depends on upstream `ui-reference` row shape (`kind: 'session'` in `value`) and `sessions.list`'s `cwd`. If upstream changes, it degrades to the original layout instead of dropping candidates.
-- Menu enhancement targets semantic hooks (`[role="listbox"]`, `[role="presentation"]`) rather than hashed class names, but a structural overhaul could still disable it — the symptom is "buttons gone", never a broken `@`.
+- Menu enhancement relies on `[data-trigger-menu]`, `[role="listbox"]`, `[role="presentation"]` and the `dsh-slash-option-<source>-` id prefix; a structural overhaul can disable it — the symptom is "no sticky heading / no button", never a broken `@`.
+- Plugin icons only accept `data:image/...;base64` in `meta.icon`; an invalid or failing image falls back to the built-in glyph.
+- Folder disambiguation tries up to three parent segments; extremely deep duplicate paths could still collide (they sort by final label and never drop rows).
 
 ## Development
 
@@ -145,7 +164,7 @@ Three traps worth knowing, documented in the code: never read a section name wit
 node check.mjs
 ```
 
-No browser, no DSH: a tiny React/DOM stand-in runs `client.js` for real — grouping and ordering, folder bucketing, the fold click round-trip, `onPick`'s insert shape and `codec`, and chip rendering. CI runs the same file on every push.
+No browser, no DSH: a tiny React/DOM stand-in runs `client.js` and `index.js` for real — the host prompt, the plugin source and System/User split, folder bucketing with same-name disambiguation, plugin icons and long descriptions, empty/error states, sticky headings and counts, the fold click round-trip, `@`-menu detection without touching the slash menu, `onPick`'s insert shape and `codec`, and chip rendering. CI runs the same file on every push.
 
 ## License
 

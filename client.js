@@ -6,7 +6,7 @@
  *      选中后往草稿里插一段 `@[标题](dsh-plugin:包名)`。
  *   ② 给这段文本注册 UserText 规则 + 行内渲染器，发出去显示成一枚 chip。
  *   ③ 把 ui-reference 的会话候选按「所在文件夹」重新分组。
- *   ④ 给候选菜单的每个分组标题加大字号、右侧加折叠按钮。
+ *   ④ 给候选菜单的分组标题做视觉增强：吸顶、计数、折叠。
  *
  * ③④ 是「改装别人家组件」的活，做法分别是拦 source.candidates（数据层）
  * 和 MutationObserver（DOM 层）。三条自我约束：
@@ -31,6 +31,10 @@ window.__ModuleLoader__.load({
       'section.folder.unknown': '其他文件夹',
       'row.subagent': '子代理',
       'fold.label': '折叠或展开这一组',
+      'fold.collapse': '折叠',
+      'fold.expand': '展开',
+      'empty.title': '还没有可引用的插件',
+      'empty.hint': '在「设置 → 插件」里装一个，再回来 @',
       'error.title': '读不到插件列表',
       'error.hint': '清单服务没响应，稍后再试',
     }
@@ -41,30 +45,66 @@ window.__ModuleLoader__.load({
       'section.folder.unknown': 'Other folders',
       'row.subagent': 'subagent',
       'fold.label': 'Fold or unfold this group',
+      'fold.collapse': 'Collapse',
+      'fold.expand': 'Expand',
+      'empty.title': 'No plugins to mention yet',
+      'empty.hint': 'Install one in Settings → Plugins, then type @ again',
       'error.title': 'Plugin list unavailable',
       'error.hint': 'The inventory service did not answer; try again later',
     }
 
     const CSS = `
-/* 分组标题：默认 11px 跟正文 13px 挤在一起，这里抬到 14px + 分隔线，一眼能看出是分组 */
-[role="listbox"] > div[role="presentation"]{
-  font-size:14px;font-weight:700;line-height:20px;letter-spacing:.02em;
+/* 只改 @ 菜单：斜杠菜单、模型选择器等别的 listbox 一律不碰。
+   data-dshatp-mention 由 installMenuEnhancements() 在识别出 reference / plugins
+   来源时打到菜单根节点上。 */
+[data-dshatp-mention="1"] [role="listbox"] > div[role="presentation"]{
+  position:sticky;top:0;z-index:2;box-sizing:border-box;
+  display:flex;align-items:center;gap:8px;
+  min-height:32px;padding:6px 8px 5px;
+  font-size:14px;font-weight:650;line-height:20px;letter-spacing:.01em;
   color:var(--dsw-alias-label-secondary,var(--dsw-alias-label-tertiary));
-  padding:14px 8px 5px;min-height:34px;
+  background:var(--dsw-alias-menu-group-header-fill,var(--dsw-specific-menu,var(--dsw-alias-bg-layer-2)));
   border-top:1px solid var(--dsw-alias-border-l1,rgba(127,127,127,.16));
-  display:flex;align-items:center;justify-content:space-between;gap:8px}
-[role="listbox"] > div[role="presentation"]:first-child{border-top:0;padding-top:6px}
+  cursor:default;user-select:none;-webkit-user-select:none}
+[data-dshatp-mention="1"] [role="listbox"] > div[role="presentation"]:first-child{
+  border-top:0;padding-top:4px}
+[data-dshatp-mention="1"] [role="listbox"] > div[role="presentation"][data-dshatp-foldable="1"]{cursor:pointer}
+[data-dshatp-mention="1"] [role="listbox"] > div[role="presentation"][data-dshatp-foldable="1"]:hover{
+  color:var(--dsw-alias-label-primary,var(--dsw-alias-label-secondary))}
+/* 折起来的组后面紧跟着下一个标题；两个 sticky 会叠在一起把折叠组盖住。
+   折叠组不吸顶，让下一个组正常接管顶部。 */
+[data-dshatp-mention="1"] [role="listbox"] > div[role="presentation"][data-dshatp-folded="1"]{
+  position:static}
+/* 吸顶标题会盖住滚动到上面的行；scrollIntoView 需要给标题留出高度。 */
+[data-dshatp-mention="1"] [role="option"]{scroll-margin-top:36px}
+.dshatp-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dshatp-count{flex:none;margin-left:auto;min-width:18px;height:18px;padding:0 6px;border-radius:9px;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.14));
+  color:var(--dsw-alias-label-secondary,var(--dsw-alias-label-tertiary));font-size:11px;font-weight:600;line-height:1;
+  font-variant-numeric:tabular-nums;letter-spacing:0}
+.dshatp-count[hidden]{display:none}
 .dshatp-fold{flex:none;display:inline-flex;align-items:center;justify-content:center;
-  width:22px;height:22px;padding:0;border:0;border-radius:6px;background:transparent;
-  color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:1;cursor:pointer;
-  opacity:.8;transition:opacity .12s ease,background .12s ease}
-.dshatp-fold:hover{opacity:1;background:var(--dsw-alias-fill-l2,rgba(127,127,127,.14))}
-[data-dshatp-folded="1"]{color:var(--dsw-alias-label-tertiary)}
-.dshatp-chip{display:inline-flex;align-items:center;gap:4px;max-width:100%;padding:0 6px;border-radius:6px;
-  background:var(--dsw-alias-fill-l2,rgba(127,127,127,.14));color:var(--dsw-alias-label-primary,inherit);
-  font-size:inherit;line-height:1.55;vertical-align:baseline;white-space:nowrap}
-.dshatp-chip-icon{opacity:.65;font-size:.9em}
-.dshatp-chip-title{overflow:hidden;text-overflow:ellipsis}
+  width:24px;height:24px;padding:0;border:0;border-radius:6px;background:transparent;
+  color:var(--dsw-alias-menu-icon,var(--dsw-alias-label-tertiary));font-size:0;line-height:1;cursor:pointer;
+  opacity:.85;transition:opacity .12s ease,background .12s ease,color .12s ease}
+.dshatp-fold::before{content:"";width:6px;height:6px;
+  border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
+  transform:rotate(45deg) translate(-1px,-1px);transition:transform .15s ease}
+[data-dshatp-folded="1"] .dshatp-fold::before{transform:rotate(-45deg) translate(-1px,1px)}
+.dshatp-fold:hover{opacity:1;background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.14))}
+.dshatp-fold:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-brand-primary));
+  outline-offset:1px}
+.dshatp-plugin-icon{width:14px;height:14px;border-radius:3px;object-fit:contain;display:block}
+.dshatp-plugin-glyph{width:14px;height:14px;display:block;flex:none}
+.dshatp-chip{display:inline-flex;align-items:center;gap:4px;max-width:100%;padding:1px 6px;border-radius:6px;
+  background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.14));color:var(--dsw-alias-label-primary,inherit);
+  font-size:inherit;line-height:1.45;vertical-align:baseline;white-space:nowrap}
+.dshatp-chip-icon{opacity:.6;font-size:.9em;flex:none}
+.dshatp-chip-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (prefers-reduced-motion: reduce){
+  .dshatp-fold,.dshatp-fold::before{transition:none}
+}
 `
 
     /** 引用文本的规范形态；标题里的方括号会破坏 Markdown 语法，先洗掉。 */
@@ -103,6 +143,73 @@ window.__ModuleLoader__.load({
     }
 
     /* ================================================================== *
+     * 行图标：插件清单里的 meta.icon 是 base64 data URL，菜单只接受
+     * 「字符串 kind」或 React 组件，所以这里把图片包成 14px 的组件。
+     * ================================================================== */
+    const ICON_CACHE = new Map()
+    const IMAGE_DATA_URL = /^data:image\/(?:png|jpe?g|webp|svg\+xml);base64,[a-z0-9+/=_-]+$/i
+
+    function PluginGlyph({ size = 14 }) {
+      return h('svg', {
+        className: 'dshatp-plugin-glyph',
+        width: size,
+        height: size,
+        viewBox: '0 0 16 16',
+        fill: 'none',
+        'aria-hidden': 'true',
+      },
+      h('path', {
+        d: 'M3 5.2 8 2.8l5 2.4v5.6L8 13.2 3 10.8V5.2Z',
+        stroke: 'currentColor',
+        strokeWidth: 1.2,
+        strokeLinejoin: 'round',
+      }),
+      h('path', { d: 'M3 5.2 8 7.7l5-2.5M8 7.7v5.5', stroke: 'currentColor', strokeWidth: 1.2, strokeLinejoin: 'round' }))
+    }
+
+    function WarningGlyph({ size = 14 }) {
+      return h('svg', {
+        className: 'dshatp-plugin-glyph',
+        width: size,
+        height: size,
+        viewBox: '0 0 16 16',
+        fill: 'none',
+        'aria-hidden': 'true',
+      },
+      h('path', {
+        d: 'M8 2.5 14 13H2L8 2.5Z',
+        stroke: 'currentColor',
+        strokeWidth: 1.2,
+        strokeLinejoin: 'round',
+      }),
+      h('path', { d: 'M8 6.2v3.2', stroke: 'currentColor', strokeWidth: 1.2, strokeLinecap: 'round' }),
+      h('circle', { cx: 8, cy: 11.4, r: 0.7, fill: 'currentColor' }))
+    }
+
+    function pluginIcon(icon) {
+      if (typeof icon !== 'string' || !IMAGE_DATA_URL.test(icon)) return PluginGlyph
+      let component = ICON_CACHE.get(icon)
+      if (component === undefined) {
+        component = function PluginIcon({ size = 14 }) {
+          return h('img', {
+            className: 'dshatp-plugin-icon',
+            src: icon,
+            width: size,
+            height: size,
+            alt: '',
+            'aria-hidden': 'true',
+            draggable: false,
+            onError: (event) => {
+              if (event && event.currentTarget) event.currentTarget.style.display = 'none'
+            },
+          })
+        }
+        ICON_CACHE.set(icon, component)
+      }
+      return component
+    }
+
+    /* ================================================================== *
      * ① 插件候选：系统 / 用户
      * ================================================================== */
     const CACHE_MS = 5000
@@ -122,13 +229,15 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * 系统 vs 用户：
-     *   - `availability === 'installation'`：包在 DSH 安装目录的 package.json 里，随客户端发 —— 系统。
-     *   - `official === true`：官方维护的随附/可选包 —— 系统。
-     *   - 其余只出现在 profile 依赖里的，是 `dsh plugin add` 装的 —— 用户。
+     * 系统 vs 用户只看「这个包实际从哪来」：
+     *   - `availability === 'installation'`：包在 DSH 安装目录里，随客户端发 —— 系统。
+     *   - `availability === 'profile'`：只出现在 profile 依赖里，是用户 `dsh plugin add` 装的 —— 用户。
+     *
+     * 不能拿 `official` 当系统判据：官方可选包被用户装进 profile 后
+     * `official` 仍是 true，但它不在安装目录里，对用户来说就是「我装的」。
      */
     function isSystem(bundle) {
-      return bundle.official === true || bundle.availability === 'installation'
+      return bundle.availability === 'installation'
     }
 
     function toRows(ctx, bundles, t, query) {
@@ -138,25 +247,32 @@ window.__ModuleLoader__.load({
       for (const bundle of bundles) {
         if (!bundle || typeof bundle.name !== 'string') continue
         if (bundle.availability === 'missing') continue
+        /* profile 里偶尔会有不是 bundle 的依赖；它不是插件，别列进 @ 候选。 */
+        if (bundle.error && bundle.error.code === 'not-bundle') continue
         if (bundle.installed !== true && bundle.enabled !== true) continue
         if (seen.has(bundle.name)) continue
         seen.add(bundle.name)
 
         const meta = bundle.meta || {}
         const title = resolveText(locale, meta.title) || shortName(bundle.name)
-        const blurb = resolveText(locale, meta.description) || (typeof bundle.description === 'string' ? bundle.description : '')
+        const blurb = String(resolveText(locale, meta.description) || (typeof bundle.description === 'string' ? bundle.description : ''))
+          .replace(/\s+/g, ' ')
+          .trim()
         const enabled = bundle.enabled === true
         const system = isSystem(bundle)
+        const blurbText = blurb !== title ? blurb : ''
         const parts = []
         if (bundle.version) parts.push(`v${bundle.version}`)
-        if (blurb) parts.push(blurb.length > 42 ? `${blurb.slice(0, 42)}…` : blurb)
+        if (blurbText) parts.push(blurbText)
         if (!enabled) parts.push(t('section.disabled'))
 
         rows.push({
           rank: (system ? 0 : 1) * 2 + (enabled ? 0 : 1),
           firstName: title,
+          search: [title, blurb, bundle.name, shortName(bundle.name), enabled ? '' : t('section.disabled')].join(' '),
           row: {
             name: title,
+            icon: pluginIcon(meta.icon),
             ...(parts.length > 0 ? { description: parts.join(' · ') } : {}),
             section: t(system ? 'section.system' : 'section.user'),
             value: JSON.stringify({ name: bundle.name, title, system }),
@@ -167,7 +283,7 @@ window.__ModuleLoader__.load({
       const needle = String(query || '').trim().toLocaleLowerCase()
       const filtered = needle === ''
         ? rows
-        : rows.filter((item) => `${item.row.name} ${item.row.description || ''} ${item.row.value}`.toLocaleLowerCase().includes(needle))
+        : rows.filter((item) => item.search.toLocaleLowerCase().includes(needle))
 
       /* section 必须连续，菜单才会把标题画对；同组内已启用在前，再按标题。 */
       filtered.sort((left, right) => {
@@ -189,11 +305,37 @@ window.__ModuleLoader__.load({
       return match === null ? undefined : match[1]
     }
 
-    function folderOf(cwd, t) {
-      if (typeof cwd !== 'string' || cwd === '') return t('section.folder.unknown')
-      const trimmed = cwd.replace(/[\\/]+$/, '')
-      const base = trimmed.split(/[\\/]/).pop()
-      return base || trimmed || t('section.folder.unknown')
+    /** 取路径末尾 n 段；用于「同名文件夹」的消歧显示。 */
+    function tailOf(cwd, n) {
+      const parts = String(cwd).replace(/[\\/]+$/, '').split(/[\\/]/).filter(Boolean)
+      return parts.slice(-n).join('/') || String(cwd)
+    }
+
+    /**
+     * 同名文件夹只显示 basename 会混在一起（~/work/src 和 ~/play/src 都叫 src）。
+     * 这里按 cwd 分组，撞名时逐级加父目录，直到每个标题唯一。
+     */
+    function labelsFor(cwds, keepShort) {
+      const labels = new Map()
+      for (const cwd of cwds) labels.set(cwd, tailOf(cwd, 1))
+      for (let count = 1; count <= 3; count += 1) {
+        const seen = new Map()
+        for (const cwd of cwds) {
+          const label = labels.get(cwd)
+          seen.set(label, (seen.get(label) || 0) + 1)
+        }
+        let changed = false
+        for (const cwd of cwds) {
+          const label = labels.get(cwd)
+          /* 当前会话所在的文件夹保留短名，让别人加父目录；否则两个都变长。 */
+          if ((seen.get(label) || 0) > 1 && cwd !== keepShort) {
+            labels.set(cwd, tailOf(cwd, count + 1))
+            changed = true
+          }
+        }
+        if (!changed) break
+      }
+      return labels
     }
 
     /**
@@ -225,28 +367,28 @@ window.__ModuleLoader__.load({
           strays.push(row)
           continue
         }
-        const label = folderOf(summary.cwd, t)
         const next = summary.origin === 'subagent' && row.description
           ? { ...row, description: `${row.description} · ${t('row.subagent')}` }
           : row
-        const bucket = groups.get(label)
-        if (bucket === undefined) groups.set(label, [next])
+        /* 按 cwd 分组，不按显示名：显示名后面再算，避免同名文件夹被合并。 */
+        const bucket = groups.get(summary.cwd)
+        if (bucket === undefined) groups.set(summary.cwd, [next])
         else bucket.push(next)
       }
       if (!sawSession) return rows
 
-      /* 当前会话所在的文件夹排最前，其余按名字。 */
       const currentCwd = byId[session && session.sessionId] && byId[session.sessionId].cwd
-      const currentLabel = folderOf(currentCwd, t)
+      const labels = labelsFor([...groups.keys()], currentCwd)
       const ordered = [...groups.keys()].sort((left, right) => {
-        if (left === currentLabel) return -1
-        if (right === currentLabel) return 1
-        return left.localeCompare(right, 'zh-Hans-CN')
+        if (left === currentCwd) return -1
+        if (right === currentCwd) return 1
+        return (labels.get(left) || left).localeCompare(labels.get(right) || right, 'zh-Hans-CN')
       })
 
       const out = [...head]
-      for (const label of ordered) {
-        for (const row of groups.get(label)) out.push({ ...row, section: label })
+      for (const cwd of ordered) {
+        const label = labels.get(cwd) || tailOf(cwd, 1) || t('section.folder.unknown')
+        for (const row of groups.get(cwd)) out.push({ ...row, section: label })
       }
       /* section 必须连续，所以认不出文件夹的会话统一放最后。 */
       return out.concat(strays)
@@ -275,26 +417,51 @@ window.__ModuleLoader__.load({
     }
 
     /* ================================================================== *
-     * ④ 菜单：标题加大 + 右侧折叠按钮
+     * ④ 菜单：吸顶标题 + 计数 + 右侧折叠按钮
      * ================================================================== */
     const folded = new Set()
 
+    /**
+     * 只返回 `@` 菜单的 listbox：菜单根节点带 `data-trigger-menu`，
+     * 里面出现 reference / plugins 来源的 option id 才算。
+     * 斜杠菜单、模型选择器之类的 listbox 一律不动。
+     */
     function menuListboxes() {
-      return document.querySelectorAll('[role="listbox"]')
+      const lists = []
+      let menus
+      try {
+        menus = document.querySelectorAll('[data-trigger-menu]')
+      } catch {
+        return lists
+      }
+      for (const menu of menus) {
+        const list = menu.querySelector('[role="listbox"]')
+        const mention = list !== null && list.querySelector('[id^="dsh-slash-option-reference-"], [id^="dsh-slash-option-plugins-"]') !== null
+        if (!mention) {
+          if (menu.hasAttribute('data-dshatp-mention')) menu.removeAttribute('data-dshatp-mention')
+          continue
+        }
+        if (menu.getAttribute('data-dshatp-mention') !== '1') menu.setAttribute('data-dshatp-mention', '1')
+        lists.push(list)
+      }
+      return lists
     }
 
     /**
      * 读一个分组标题的纯文本。
-     * 不能用 textContent —— 折叠按钮是自己塞进去的，会把 ▾ 算进组名里，
-     * 下次再比对「这组是不是折着的」就对不上了（点了没反应就是这么来的）。
+     * 不能把按钮/计数也算进去：组名会被污染，下次再比对「这组是不是折着的」
+     * 就对不上（点了没反应就是这么来的）。优先读我们自己包的 `.dshatp-label`。
      */
     function sectionLabel(node) {
-      let text = ''
+      const label = node.querySelector(':scope > .dshatp-label')
+      let outside = ''
       for (const child of node.childNodes) {
-        if (child.nodeType === 3) text += child.textContent
-        else if (child.nodeType === 1 && !/dshatp-fold/.test(child.className || '')) text += child.textContent
+        if (child === label) continue
+        if (child.nodeType === 1 && /dshatp-(?:fold|count)/.test(child.className || '')) continue
+        outside += child.textContent || ''
       }
-      return text.trim()
+      const text = outside.trim() !== '' ? outside : label === null ? '' : label.textContent
+      return String(text).replace(/\s+/g, ' ').trim()
     }
 
     function collectSections(list) {
@@ -309,13 +476,66 @@ window.__ModuleLoader__.load({
       return sections
     }
 
-    /** 折起来／展开一组。组名每次现读，绝不用创建闭包时的旧值。 */
-    function toggleFold(title, t) {
-      const label = sectionLabel(title)
-      if (label === '') return
-      if (folded.has(label)) folded.delete(label)
-      else folded.add(label)
-      applyFolds(t)
+    /** 把 React 写进来的文本节点包一层 span，给它 ellipsis 和 flex 收缩的能力。 */
+    function ensureLabel(title) {
+      let label = title.querySelector(':scope > .dshatp-label')
+      const outside = []
+      for (const child of title.childNodes) {
+        if (child === label) continue
+        if (child.nodeType === 1 && /dshatp-(?:fold|count)/.test(child.className || '')) continue
+        if (child.nodeType === 3 && String(child.textContent).trim() !== '') outside.push(child)
+      }
+      if (label !== null) {
+        /* React 偶尔会把新文本作为新的直接子节点插进来；把新文本收进 label，
+           否则 label 会停在旧内容上。 */
+        if (outside.length > 0) {
+          label.textContent = ''
+          for (const node of outside) label.appendChild(node)
+        }
+        return label
+      }
+      label = document.createElement('span')
+      label.className = 'dshatp-label'
+      if (outside.length > 0) {
+        for (const node of outside) label.appendChild(node)
+      } else {
+        label.textContent = sectionLabel(title)
+      }
+      title.insertBefore(label, title.firstChild)
+      return label
+    }
+
+    function ensureCount(title, rows) {
+      let count = title.querySelector(':scope > .dshatp-count')
+      if (count === null) {
+        count = document.createElement('span')
+        count.className = 'dshatp-count'
+        const button = title.querySelector(':scope > button.dshatp-fold')
+        if (button !== null) title.insertBefore(count, button)
+        else title.appendChild(count)
+      }
+      const button = title.querySelector(':scope > button.dshatp-fold')
+      if (button !== null && count.nextSibling !== button) title.insertBefore(count, button)
+      const text = String(rows)
+      if (count.textContent !== text) count.textContent = text
+      const hidden = rows < 2
+      if (count.hidden !== hidden) count.hidden = hidden
+      return count
+    }
+
+    function ensureTitleClick(title, t) {
+      if (title.dataset.dshatpToggle === '1') return
+      title.dataset.dshatpToggle = '1'
+      /* 和候选行一样在 mousedown 阶段保住输入框焦点，否则点标题会让菜单失焦。 */
+      title.addEventListener('mousedown', (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+      })
+      title.addEventListener('click', (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        toggleFold(title, t)
+      })
     }
 
     function ensureFoldButton(title, t) {
@@ -325,6 +545,7 @@ window.__ModuleLoader__.load({
       button = document.createElement('button')
       button.type = 'button'
       button.className = 'dshatp-fold'
+      button.setAttribute('aria-expanded', 'true')
       button.setAttribute('aria-label', t('fold.label'))
       button.title = t('fold.label')
       /* 别让按钮吃掉菜单的 mousedown 语义（会让菜单误以为点了外部） */
@@ -338,17 +559,49 @@ window.__ModuleLoader__.load({
         toggleFold(title, t)
       })
       title.appendChild(button)
-
-      /* 整条标题也能点：按钮只有 22px，点行首的字更顺手（按钮自己会拦掉冒泡，不会折两次） */
-      if (title.dataset.dshatpToggle !== '1') {
-        title.dataset.dshatpToggle = '1'
-        title.addEventListener('click', (event) => {
-          event.preventDefault()
-          event.stopPropagation()
-          toggleFold(title, t)
-        })
-      }
       return button
+    }
+
+    /** 折起来／展开一组。组名每次现读，绝不用创建闭包时的旧值。 */
+    function toggleFold(title, t) {
+      if (title.querySelector(':scope > button.dshatp-fold') === null) return
+      const label = sectionLabel(title)
+      if (label === '') return
+      if (folded.has(label)) folded.delete(label)
+      else folded.add(label)
+      applyFolds(t)
+    }
+
+    /**
+     * 折叠后如果高亮正落在被藏起来的行上，菜单看起来会像「没有选中项」。
+     * 用 mousemove 走菜单自己的 hover 通道，把高亮挪到最近一个可见行；
+     * 菜单没有公开的「移动高亮」接口，但 hover 是它公开的指针入口。
+     */
+    function keepHighlightVisible(list, direction = 1) {
+      if (typeof list.querySelectorAll !== 'function' || typeof MouseEvent !== 'function') return
+      const active = list.querySelector('[role="option"][aria-selected="true"]')
+      if (active === null || active.style.display !== 'none') return
+      const options = [...list.querySelectorAll('[role="option"]')]
+      const at = options.indexOf(active)
+      const find = (from, to, step) => {
+        if (from < 0 || from >= options.length) return null
+        for (let index = from; index >= 0 && index < options.length && (step > 0 ? index < to : index >= to); index += step) {
+          if (options[index].style.display !== 'none') return options[index]
+        }
+        return null
+      }
+      const forward = direction >= 0
+      const target = at < 0
+        ? (forward ? find(0, options.length, 1) : find(options.length - 1, -1, -1))
+        : forward
+          ? find(at + 1, options.length, 1) || find(0, at, 1)
+          : find(at - 1, -1, -1) || find(options.length - 1, at, -1)
+      if (target === null) return
+      try {
+        target.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, cancelable: true, view: window }))
+      } catch {
+        /* 高亮没挪动也不该影响菜单本身 */
+      }
     }
 
     function applyFolds(t) {
@@ -360,23 +613,42 @@ window.__ModuleLoader__.load({
       }
       for (const list of lists) {
         for (const section of collectSections(list)) {
-          const label = section.label
+          ensureLabel(section.title)
+          ensureTitleClick(section.title, t)
+          const label = sectionLabel(section.title)
           if (label === '') continue
           const foldable = section.rows.length >= 3
           const isFolded = foldable && folded.has(label)
-          const button = foldable ? ensureFoldButton(section.title, t) : null
+          ensureCount(section.title, section.rows.length)
+          let button = section.title.querySelector(':scope > button.dshatp-fold')
+          if (!foldable && button !== null) {
+            button.remove()
+            button = null
+          }
+          if (foldable) button = ensureFoldButton(section.title, t)
           /* 只在真的变了的时候写 DOM：写相同的 data 属性也会再触发一次 MutationObserver，容易自激。 */
           const flag = isFolded ? '1' : '0'
           if (section.title.dataset.dshatpFolded !== flag) section.title.dataset.dshatpFolded = flag
+          const foldableFlag = foldable ? '1' : '0'
+          if (section.title.dataset.dshatpFoldable !== foldableFlag) section.title.dataset.dshatpFoldable = foldableFlag
           if (button !== null) {
-            const glyph = isFolded ? '▸' : '▾'
-            if (button.textContent !== glyph) button.textContent = glyph
+            const expanded = isFolded ? 'false' : 'true'
+            if (button.getAttribute('aria-expanded') !== expanded) button.setAttribute('aria-expanded', expanded)
+            const action = t(isFolded ? 'fold.expand' : 'fold.collapse')
+            const aria = `${action} ${label}`
+            if (button.getAttribute('aria-label') !== aria) button.setAttribute('aria-label', aria)
+            if (button.title !== aria) button.title = aria
           }
           for (const row of section.rows) {
+            const description = [...row.children].find((child) => /itemDescription/.test(child.className || ''))
+            if (description !== undefined && description.textContent && description.getAttribute('title') !== description.textContent) {
+              description.setAttribute('title', description.textContent)
+            }
             if (isFolded) row.style.display = 'none'
             else if (row.style.display === 'none') row.style.display = ''
           }
         }
+        keepHighlightVisible(list)
       }
     }
 
@@ -406,7 +678,7 @@ window.__ModuleLoader__.load({
       /* 折叠起来的行还在数据里（菜单的键盘高亮按数据算），回车/Tab 别让它选中看不见的东西。 */
       const guard = (event) => {
         if (event.key !== 'Enter' && event.key !== 'Tab') return
-        const active = document.querySelector('[role="option"][aria-selected="true"]')
+        const active = document.querySelector('[data-dshatp-mention="1"] [role="option"][aria-selected="true"]')
         if (active !== null && active.style.display === 'none') {
           event.preventDefault()
           event.stopPropagation()
@@ -414,15 +686,47 @@ window.__ModuleLoader__.load({
       }
       document.addEventListener('keydown', guard, true)
 
+      /*
+       * 方向键仍由菜单自己处理，但它的高亮按数据算、会落进被折叠的行。
+       * 等这一次按键的渲染结束后，如果高亮是不可见的，就沿同一方向
+       * 找到最近的可见行，用 hover 通道把它挪过去。
+       */
+      let installed = true
+      const skipHidden = (event) => {
+        if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+        if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey || event.isComposing) return
+        if (document.querySelector('[data-trigger-menu]') === null) return
+        const direction = event.key === 'ArrowDown' ? 1 : -1
+        setTimeout(() => {
+          if (!installed) return
+          for (const list of menuListboxes()) keepHighlightVisible(list, direction)
+        }, 0)
+      }
+      document.addEventListener('keydown', skipHidden, true)
+
       return () => {
+        installed = false
         observer.disconnect()
         document.removeEventListener('keydown', guard, true)
+        document.removeEventListener('keydown', skipHidden, true)
         for (const list of menuListboxes()) {
           for (const section of collectSections(list)) {
             const button = section.title.querySelector(':scope > button.dshatp-fold')
             if (button !== null) button.remove()
+            const count = section.title.querySelector(':scope > .dshatp-count')
+            if (count !== null) count.remove()
+            const label = section.title.querySelector(':scope > .dshatp-label')
+            if (label !== null) {
+              for (const child of [...label.childNodes]) section.title.insertBefore(child, label)
+              label.remove()
+            }
+            section.title.removeAttribute('data-dshatp-folded')
+            section.title.removeAttribute('data-dshatp-foldable')
             for (const row of section.rows) row.style.display = ''
           }
+        }
+        for (const menu of document.querySelectorAll('[data-trigger-menu]')) {
+          if (menu.hasAttribute('data-dshatp-mention')) menu.removeAttribute('data-dshatp-mention')
         }
       }
     }
@@ -547,7 +851,7 @@ window.__ModuleLoader__.load({
           console.warn('[dsh-at-plugins] session grouping hook failed:', error && error.message ? error.message : error)
         }
 
-        /* --- ④ 菜单标题放大 + 折叠按钮 --- */
+        /* --- ④ 菜单：吸顶标题 + 计数 + 折叠按钮 --- */
         try {
           ctx.effect(() => installMenuEnhancements(t), 'at-plugins: menu enhancements')
         } catch (error) {
@@ -565,10 +869,14 @@ window.__ModuleLoader__.load({
             const query = request && request.query
             try {
               const bundles = await readBundles(ctx, cache, false)
-              return toRows(ctx, bundles, t, query)
+              const rows = toRows(ctx, bundles, t, query)
+              if (rows.length === 0 && String(query || '').trim() === '') {
+                return [{ name: t('empty.title'), description: t('empty.hint'), icon: PluginGlyph }]
+              }
+              return rows
             } catch (error) {
               console.warn('[dsh-at-plugins] plugin list unavailable:', error && error.message ? error.message : error)
-              return [{ name: t('error.title'), description: t('error.hint') }]
+              return [{ name: t('error.title'), description: t('error.hint'), icon: WarningGlyph }]
             }
           },
 

@@ -1,7 +1,7 @@
 {
   "name": "dsh-at-plugins",
-  "version": "0.1.1",
-  "description": "DSH 插件：在输入框 @ 一下就能列出已安装的插件，按系统/用户分组；会话按文件夹归类，分组标题可折叠。",
+  "version": "0.1.2",
+  "description": "DSH 插件：在输入框 @ 一下就能列出已安装的插件，按系统/用户分组；会话按文件夹归类；分组标题吸顶、计数、可折叠。",
   "keywords": [
     "dsh",
     "dsh-plugin",
