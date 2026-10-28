@@ -30,7 +30,6 @@ window.__ModuleLoader__.load({
       'section.disabled': '未启用',
       'section.folder.unknown': '其他文件夹',
       'row.subagent': '子代理',
-      'fold.label': '折叠或展开这一组',
       'fold.collapse': '折叠',
       'fold.expand': '展开',
       'empty.title': '还没有可引用的插件',
@@ -44,7 +43,6 @@ window.__ModuleLoader__.load({
       'section.disabled': 'disabled',
       'section.folder.unknown': 'Other folders',
       'row.subagent': 'subagent',
-      'fold.label': 'Fold or unfold this group',
       'fold.collapse': 'Collapse',
       'fold.expand': 'Expand',
       'empty.title': 'No plugins to mention yet',
@@ -59,42 +57,42 @@ window.__ModuleLoader__.load({
    来源时打到菜单根节点上。 */
 [data-dshatp-mention="1"] [role="listbox"] > div[role="presentation"]{
   position:sticky;top:0;z-index:2;box-sizing:border-box;
-  display:flex;align-items:center;gap:8px;
-  min-height:32px;padding:6px 8px 5px;
+  display:block;min-height:32px;padding:6px 8px 5px;
   font-size:14px;font-weight:650;line-height:20px;letter-spacing:.01em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   color:var(--dsw-alias-label-secondary,var(--dsw-alias-label-tertiary));
   background:var(--dsw-alias-menu-group-header-fill,var(--dsw-specific-menu,var(--dsw-alias-bg-layer-2)));
   border-top:1px solid var(--dsw-alias-border-l1,rgba(127,127,127,.16));
   cursor:default;user-select:none;-webkit-user-select:none}
 [data-dshatp-mention="1"] [role="listbox"] > div[role="presentation"]:first-child{
   border-top:0;padding-top:4px}
+[data-dshatp-mention="1"] [role="listbox"] > div[role="presentation"][data-dshatp-count],
+[data-dshatp-mention="1"] [role="listbox"] > div[role="presentation"][data-dshatp-foldable="1"]{padding-right:76px}
 [data-dshatp-mention="1"] [role="listbox"] > div[role="presentation"][data-dshatp-foldable="1"]{cursor:pointer}
 [data-dshatp-mention="1"] [role="listbox"] > div[role="presentation"][data-dshatp-foldable="1"]:hover{
   color:var(--dsw-alias-label-primary,var(--dsw-alias-label-secondary))}
+/* 计数和箭头都用伪元素画：不往 React 管理的标题节点里插子节点，
+   打字时 React 重渲染就不会把按钮/计数删掉再补，菜单也就不闪。 */
+[data-dshatp-mention="1"] [role="listbox"] > div[role="presentation"][data-dshatp-count]::after{
+  content:attr(data-dshatp-count);
+  position:absolute;right:40px;top:50%;transform:translateY(-50%);
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:18px;height:18px;padding:0 6px;border-radius:9px;
+  background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.14));
+  color:var(--dsw-alias-label-secondary,var(--dsw-alias-label-tertiary));
+  font-size:11px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:0}
+[data-dshatp-mention="1"] [role="listbox"] > div[role="presentation"][data-dshatp-foldable="1"]::before{
+  content:"";position:absolute;right:14px;top:50%;
+  width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
+  transform:translateY(-50%) rotate(45deg);transition:transform .15s ease}
+[data-dshatp-mention="1"] [role="listbox"] > div[role="presentation"][data-dshatp-folded="1"]::before{
+  transform:translateY(-50%) rotate(-45deg)}
 /* 折起来的组后面紧跟着下一个标题；两个 sticky 会叠在一起把折叠组盖住。
    折叠组不吸顶，让下一个组正常接管顶部。 */
 [data-dshatp-mention="1"] [role="listbox"] > div[role="presentation"][data-dshatp-folded="1"]{
-  position:static}
+  position:relative;top:auto}
 /* 吸顶标题会盖住滚动到上面的行；scrollIntoView 需要给标题留出高度。 */
 [data-dshatp-mention="1"] [role="option"]{scroll-margin-top:36px}
-.dshatp-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dshatp-count{flex:none;margin-left:auto;min-width:18px;height:18px;padding:0 6px;border-radius:9px;
-  display:inline-flex;align-items:center;justify-content:center;
-  background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.14));
-  color:var(--dsw-alias-label-secondary,var(--dsw-alias-label-tertiary));font-size:11px;font-weight:600;line-height:1;
-  font-variant-numeric:tabular-nums;letter-spacing:0}
-.dshatp-count[hidden]{display:none}
-.dshatp-fold{flex:none;display:inline-flex;align-items:center;justify-content:center;
-  width:24px;height:24px;padding:0;border:0;border-radius:6px;background:transparent;
-  color:var(--dsw-alias-menu-icon,var(--dsw-alias-label-tertiary));font-size:0;line-height:1;cursor:pointer;
-  opacity:.85;transition:opacity .12s ease,background .12s ease,color .12s ease}
-.dshatp-fold::before{content:"";width:6px;height:6px;
-  border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
-  transform:rotate(45deg) translate(-1px,-1px);transition:transform .15s ease}
-[data-dshatp-folded="1"] .dshatp-fold::before{transform:rotate(-45deg) translate(-1px,1px)}
-.dshatp-fold:hover{opacity:1;background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.14))}
-.dshatp-fold:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-brand-primary));
-  outline-offset:1px}
 .dshatp-plugin-icon{width:14px;height:14px;border-radius:3px;object-fit:contain;display:block}
 .dshatp-plugin-glyph{width:14px;height:14px;display:block;flex:none}
 .dshatp-chip{display:inline-flex;align-items:center;gap:4px;max-width:100%;padding:1px 6px;border-radius:6px;
@@ -103,7 +101,7 @@ window.__ModuleLoader__.load({
 .dshatp-chip-icon{opacity:.6;font-size:.9em;flex:none}
 .dshatp-chip-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (prefers-reduced-motion: reduce){
-  .dshatp-fold,.dshatp-fold::before{transition:none}
+  [data-dshatp-foldable="1"]::before{transition:none}
 }
 `
 
@@ -450,17 +448,16 @@ window.__ModuleLoader__.load({
     /**
      * 读一个分组标题的纯文本。
      * 不能把按钮/计数也算进去：组名会被污染，下次再比对「这组是不是折着的」
-     * 就对不上（点了没反应就是这么来的）。优先读我们自己包的 `.dshatp-label`。
+     * 就对不上（点了没反应就是这么来的）。
+     * 注意：不要去包 React 写的文本节点——React 仍以为它直接挂在标题下，
+     * 换文字时可能 removeChild 失败，菜单就会闪。
      */
     function sectionLabel(node) {
-      const label = node.querySelector(':scope > .dshatp-label')
-      let outside = ''
+      let text = ''
       for (const child of node.childNodes) {
-        if (child === label) continue
-        if (child.nodeType === 1 && /dshatp-(?:fold|count)/.test(child.className || '')) continue
-        outside += child.textContent || ''
+        if (child.nodeType === 3) text += child.textContent || ''
+        else if (child.nodeType === 1 && !/dshatp-(?:fold|count)/.test(child.className || '')) text += child.textContent || ''
       }
-      const text = outside.trim() !== '' ? outside : label === null ? '' : label.textContent
       return String(text).replace(/\s+/g, ' ').trim()
     }
 
@@ -474,53 +471,6 @@ window.__ModuleLoader__.load({
         }
       }
       return sections
-    }
-
-    /** 把 React 写进来的文本节点包一层 span，给它 ellipsis 和 flex 收缩的能力。 */
-    function ensureLabel(title) {
-      let label = title.querySelector(':scope > .dshatp-label')
-      const outside = []
-      for (const child of title.childNodes) {
-        if (child === label) continue
-        if (child.nodeType === 1 && /dshatp-(?:fold|count)/.test(child.className || '')) continue
-        if (child.nodeType === 3 && String(child.textContent).trim() !== '') outside.push(child)
-      }
-      if (label !== null) {
-        /* React 偶尔会把新文本作为新的直接子节点插进来；把新文本收进 label，
-           否则 label 会停在旧内容上。 */
-        if (outside.length > 0) {
-          label.textContent = ''
-          for (const node of outside) label.appendChild(node)
-        }
-        return label
-      }
-      label = document.createElement('span')
-      label.className = 'dshatp-label'
-      if (outside.length > 0) {
-        for (const node of outside) label.appendChild(node)
-      } else {
-        label.textContent = sectionLabel(title)
-      }
-      title.insertBefore(label, title.firstChild)
-      return label
-    }
-
-    function ensureCount(title, rows) {
-      let count = title.querySelector(':scope > .dshatp-count')
-      if (count === null) {
-        count = document.createElement('span')
-        count.className = 'dshatp-count'
-        const button = title.querySelector(':scope > button.dshatp-fold')
-        if (button !== null) title.insertBefore(count, button)
-        else title.appendChild(count)
-      }
-      const button = title.querySelector(':scope > button.dshatp-fold')
-      if (button !== null && count.nextSibling !== button) title.insertBefore(count, button)
-      const text = String(rows)
-      if (count.textContent !== text) count.textContent = text
-      const hidden = rows < 2
-      if (count.hidden !== hidden) count.hidden = hidden
-      return count
     }
 
     function ensureTitleClick(title, t) {
@@ -538,38 +488,15 @@ window.__ModuleLoader__.load({
       })
     }
 
-    function ensureFoldButton(title, t) {
-      let button = title.querySelector(':scope > button.dshatp-fold')
-      if (button !== null) return button
-
-      button = document.createElement('button')
-      button.type = 'button'
-      button.className = 'dshatp-fold'
-      button.setAttribute('aria-expanded', 'true')
-      button.setAttribute('aria-label', t('fold.label'))
-      button.title = t('fold.label')
-      /* 别让按钮吃掉菜单的 mousedown 语义（会让菜单误以为点了外部） */
-      button.addEventListener('mousedown', (event) => {
-        event.preventDefault()
-        event.stopPropagation()
-      })
-      button.addEventListener('click', (event) => {
-        event.preventDefault()
-        event.stopPropagation()
-        toggleFold(title, t)
-      })
-      title.appendChild(button)
-      return button
-    }
-
     /** 折起来／展开一组。组名每次现读，绝不用创建闭包时的旧值。 */
     function toggleFold(title, t) {
-      if (title.querySelector(':scope > button.dshatp-fold') === null) return
+      if (title.dataset.dshatpFoldable !== '1') return
       const label = sectionLabel(title)
       if (label === '') return
       if (folded.has(label)) folded.delete(label)
       else folded.add(label)
       applyFolds(t)
+      for (const list of menuListboxes()) keepHighlightVisible(list)
     }
 
     /**
@@ -613,42 +540,36 @@ window.__ModuleLoader__.load({
       }
       for (const list of lists) {
         for (const section of collectSections(list)) {
-          ensureLabel(section.title)
           ensureTitleClick(section.title, t)
           const label = sectionLabel(section.title)
           if (label === '') continue
           const foldable = section.rows.length >= 3
           const isFolded = foldable && folded.has(label)
-          ensureCount(section.title, section.rows.length)
-          let button = section.title.querySelector(':scope > button.dshatp-fold')
-          if (!foldable && button !== null) {
-            button.remove()
-            button = null
+          /* 只在真的变了的时候写属性：写相同值也会再触发一次 MutationObserver，容易自激。 */
+          const count = section.rows.length >= 2 ? String(section.rows.length) : ''
+          if (count === '') {
+            if ('dshatpCount' in section.title.dataset) delete section.title.dataset.dshatpCount
+          } else if (section.title.dataset.dshatpCount !== count) {
+            section.title.dataset.dshatpCount = count
           }
-          if (foldable) button = ensureFoldButton(section.title, t)
-          /* 只在真的变了的时候写 DOM：写相同的 data 属性也会再触发一次 MutationObserver，容易自激。 */
           const flag = isFolded ? '1' : '0'
           if (section.title.dataset.dshatpFolded !== flag) section.title.dataset.dshatpFolded = flag
           const foldableFlag = foldable ? '1' : '0'
           if (section.title.dataset.dshatpFoldable !== foldableFlag) section.title.dataset.dshatpFoldable = foldableFlag
-          if (button !== null) {
-            const expanded = isFolded ? 'false' : 'true'
-            if (button.getAttribute('aria-expanded') !== expanded) button.setAttribute('aria-expanded', expanded)
-            const action = t(isFolded ? 'fold.expand' : 'fold.collapse')
-            const aria = `${action} ${label}`
-            if (button.getAttribute('aria-label') !== aria) button.setAttribute('aria-label', aria)
-            if (button.title !== aria) button.title = aria
-          }
+          const hint = foldable ? `${t(isFolded ? 'fold.expand' : 'fold.collapse')} ${label}` : ''
+          if (section.title.title !== hint) section.title.title = hint
           for (const row of section.rows) {
             const description = [...row.children].find((child) => /itemDescription/.test(child.className || ''))
             if (description !== undefined && description.textContent && description.getAttribute('title') !== description.textContent) {
               description.setAttribute('title', description.textContent)
             }
-            if (isFolded) row.style.display = 'none'
-            else if (row.style.display === 'none') row.style.display = ''
+            if (isFolded) {
+              if (row.style.display !== 'none') row.style.display = 'none'
+            } else if (row.style.display === 'none') {
+              row.style.display = ''
+            }
           }
         }
-        keepHighlightVisible(list)
       }
     }
 
@@ -658,11 +579,20 @@ window.__ModuleLoader__.load({
        * 拖一帧再补按钮/再隐藏行，用户看到的就是「框在闪」。
        */
       let busy = false
+      const seenMenus = new WeakSet()
       const run = () => {
         if (busy) return
         busy = true
         try {
           applyFolds(t)
+          /* 新开的菜单如果第一个可见组是折叠的，高亮可能落在隐藏行上；只挪一次。 */
+          for (const list of menuListboxes()) {
+            const menu = list.parentNode
+            if (menu !== null && menu !== undefined && !seenMenus.has(menu)) {
+              seenMenus.add(menu)
+              keepHighlightVisible(list)
+            }
+          }
         } catch (error) {
           console.warn('[dsh-at-plugins] fold pass skipped:', error && error.message ? error.message : error)
         } finally {
@@ -711,17 +641,10 @@ window.__ModuleLoader__.load({
         document.removeEventListener('keydown', skipHidden, true)
         for (const list of menuListboxes()) {
           for (const section of collectSections(list)) {
-            const button = section.title.querySelector(':scope > button.dshatp-fold')
-            if (button !== null) button.remove()
-            const count = section.title.querySelector(':scope > .dshatp-count')
-            if (count !== null) count.remove()
-            const label = section.title.querySelector(':scope > .dshatp-label')
-            if (label !== null) {
-              for (const child of [...label.childNodes]) section.title.insertBefore(child, label)
-              label.remove()
-            }
             section.title.removeAttribute('data-dshatp-folded')
             section.title.removeAttribute('data-dshatp-foldable')
+            delete section.title.dataset.dshatpCount
+            section.title.title = ''
             for (const row of section.rows) row.style.display = ''
           }
         }

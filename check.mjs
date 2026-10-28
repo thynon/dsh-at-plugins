@@ -7,7 +7,7 @@
  *   ③ 会话候选：按 cwd 归到文件夹标题下，同名文件夹消歧，子代理有标记
  *   ④ onPick 插出来的文本，能不能被 UserText 规则原样认回来
  *   ⑤ chip 渲染器拿到 node 时不抛错
- *   ⑥ @ 菜单增强：吸顶/计数/折叠/aria，且不误伤斜杠菜单
+ *   ⑥ @ 菜单增强：吸顶/计数/折叠且不插子节点，不误伤斜杠菜单
  *
  *   node check.mjs
  * ============================================================================
@@ -220,7 +220,6 @@ const DICT = {
   'section.disabled': '未启用',
   'section.folder.unknown': '其他文件夹',
   'row.subagent': '子代理',
-  'fold.label': '折叠',
   'fold.collapse': '折叠',
   'fold.expand': '展开',
   'empty.title': '还没有可引用的插件',
@@ -471,22 +470,21 @@ menuLists.push(list)
 globalThis.document = fakeDocument
 for (const observer of observers) observer.fire()
 
-const fold = titleFiles.querySelector(':scope > button.dshatp-fold')
 ok('识别出 @ 菜单并打标记', menu.getAttribute('data-dshatp-mention') === '1')
-ok('标题包了可省略的 label', titleFiles.querySelector(':scope > .dshatp-label') !== null)
-ok('4 行的组有折叠按钮', fold !== null)
-ok('2 行的组不给按钮', titleSystem.querySelector(':scope > button.dshatp-fold') === null)
-ok('2 行的组不显示可点击光标', titleSystem.dataset.dshatpFoldable === '0')
-ok('组标题带行数', titleFiles.querySelector(':scope > .dshatp-count').textContent === '4')
-ok('单行组不显示计数', titleOne.querySelector(':scope > .dshatp-count').hidden === true)
+ok('标题不插任何子节点（防 React 重渲染闪烁）', titleFiles.childNodes.length === 1 && titleFiles.childNodes[0].nodeType === 3)
+ok('4 行的组可折叠', titleFiles.dataset.dshatpFoldable === '1')
+ok('2 行的组不给折叠', titleSystem.dataset.dshatpFoldable === '0')
+ok('2 行的组仍显示行数', titleSystem.dataset.dshatpCount === '2')
+ok('4 行的组显示行数', titleFiles.dataset.dshatpCount === '4')
+ok('单行组不显示计数', !titleOne.hasAttribute('data-dshatp-count'))
 ok('初始是展开的', fileRows.every((row) => row.style.display !== 'none'))
-ok('按钮初始 aria-expanded=true', fold !== null && fold.getAttribute('aria-expanded') === 'true')
-ok('按钮有带组名的 aria-label', fold !== null && fold.getAttribute('aria-label') === '折叠 文件', fold && fold.getAttribute('aria-label'))
-ok('按钮文字留给 CSS 箭头', fold !== null && fold.textContent === '')
+ok('折叠提示是「折叠 文件」', titleFiles.title === '折叠 文件', titleFiles.title)
 
 fileRows[1].setAttribute('aria-selected', 'true')
-fold.dispatch('click')
+titleFiles.dispatch('click')
 ok('点一下：行折起来', fileRows.every((row) => row.style.display === 'none'))
+ok('点一下：标题进入折叠态', titleFiles.dataset.dshatpFolded === '1')
+ok('点一下：提示变成「展开 文件」', titleFiles.title === '展开 文件', titleFiles.title)
 ok('折叠后高亮自动挪到可见行', systemRows[0]._lastEvent !== undefined && systemRows[0]._lastEvent.type === 'mousemove')
 
 fileRows[1].removeAttribute('aria-selected')
@@ -495,31 +493,31 @@ oneRow._lastEvent = undefined
 fakeDocument.dispatchEvent('keydown', { key: 'ArrowUp', isComposing: false, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, preventDefault() {}, stopPropagation() {} })
 await new Promise((resolve) => setTimeout(resolve, 10))
 ok('方向键向上会跳过折叠行', oneRow._lastEvent !== undefined && oneRow._lastEvent.type === 'mousemove')
-ok('点一下：aria-expanded=false', fold.getAttribute('aria-expanded') === 'false')
-ok('点一下：aria-label 变成展开', fold.getAttribute('aria-label') === '展开 文件', fold.getAttribute('aria-label'))
-ok('点一下：标题进入折叠态', titleFiles.dataset.dshatpFolded === '1')
 
 for (const observer of observers) observer.fire()
-ok('重渲染后还折着（组名没被按钮/计数污染）', fileRows.every((row) => row.style.display === 'none') && fold.getAttribute('aria-expanded') === 'false')
+ok('重渲染后还折着（组名没被伪元素污染）', fileRows.every((row) => row.style.display === 'none') && titleFiles.dataset.dshatpFolded === '1')
 
-fold.dispatch('click')
+titleFiles.dispatch('click')
 ok('再点一下：展开', fileRows.every((row) => row.style.display !== 'none'))
-ok('再点一下：aria-expanded=true', fold.getAttribute('aria-expanded') === 'true')
+ok('再点一下：回到展开态', titleFiles.dataset.dshatpFolded === '0')
 
 titleFiles.dispatch('click')
 ok('点标题本身也能折叠', fileRows.every((row) => row.style.display === 'none'))
-ok('点标题折叠时状态也变', fold.getAttribute('aria-expanded') === 'false')
 titleFiles.dispatch('click')
 ok('点标题本身能展开', fileRows.every((row) => row.style.display !== 'none'))
 
-/* 模拟 React 把标题整个重建：旧的 label/count/button 都没了，增强要能补回来。 */
+/* 模拟 React 把标题整个重建：仍不应插入任何子节点，只更新 data 属性。 */
 titleFiles.textContent = '文件'
 for (const observer of observers) observer.fire()
-ok('标题重建后 label 重新包好', titleFiles.querySelector(':scope > .dshatp-label').textContent === '文件')
-ok('标题重建后计数和按钮回来', titleFiles.querySelector(':scope > .dshatp-count').textContent === '4' && titleFiles.querySelector(':scope > button.dshatp-fold') !== null)
+ok('标题重建后仍是纯文本节点', titleFiles.childNodes.length === 1 && titleFiles.childNodes[0].nodeType === 3)
+ok('标题重建后行数属性仍在', titleFiles.dataset.dshatpCount === '4')
+ok('标题重建后折叠属性仍在', titleFiles.dataset.dshatpFoldable === '1')
 
 const style = fakeDocument.head.children.find((el) => el.getAttribute('data-plugin-css') === 'dsh-at-plugins')
 ok('分组标题吸顶', style !== undefined && style.textContent.includes('position:sticky'))
+ok('标题文本用 ellipsis 收尾', style !== undefined && style.textContent.includes('text-overflow:ellipsis'))
+ok('计数由伪元素画', style !== undefined && style.textContent.includes('content:attr(data-dshatp-count)'))
+ok('箭头由伪元素画', style !== undefined && style.textContent.includes('[data-dshatp-foldable="1"]::before'))
 ok('滚动时为吸顶标题留空间', style !== undefined && style.textContent.includes('scroll-margin-top'))
 
 /* 斜杠菜单不能被误伤：同样的 listbox 结构，但没有 reference/plugins 的 option id。 */
@@ -538,7 +536,7 @@ slashMenu.appendChild(slashList)
 menus.push(slashMenu)
 menuLists.push(slashList)
 for (const observer of observers) observer.fire()
-ok('斜杠菜单不加折叠按钮', slashTitle.querySelector(':scope > button.dshatp-fold') === null)
+ok('斜杠菜单不加折叠属性', !slashTitle.hasAttribute('data-dshatp-foldable') && !slashTitle.hasAttribute('data-dshatp-count') && slashTitle.childNodes.length === 1)
 ok('斜杠菜单不打 @ 标记', slashMenu.getAttribute('data-dshatp-mention') === null)
 
 if (fails.length > 0) {

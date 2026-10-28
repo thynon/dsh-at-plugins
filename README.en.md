@@ -24,7 +24,7 @@ Both are real captures of the same `@` menu.
 
 The "after" capture happens to have the System group folded, which shows what a folded group looks like.
 
-> Both captures are from 0.1.1. 0.1.2 makes headers sticky, adds a row-count badge, and replaces the text chevron with a 24px CSS-drawn button; the grouping itself is unchanged.
+> Both captures are from 0.1.1. 0.1.2 makes headers sticky, adds a row-count badge, and draws the chevron and count with CSS pseudo-elements; 0.1.3 fixes the menu flicker while typing without changing the look.
 
 ## Why
 
@@ -75,8 +75,8 @@ Minecraft
 
 - **Sticky**: the active group heading stops at the top of the menu while the list scrolls, so a long list never loses "which group am I in"
 - **Count**: a small badge on the right shows how many rows the group has (hidden for single-row groups to cut noise); it still tells you how many were folded away
-- **Fold**: groups with 3+ rows get a 24px chevron button; click the button or the heading itself. The chevron is CSS-drawn, not a font `▾` / `▸`
-- **Accessibility**: the button exposes `aria-expanded` and an "Expand/Collapse + group name" `aria-label`, with a `:focus-visible` ring; both the heading and the button prevent the default `mousedown` so clicking them never blurs the composer
+- **Fold**: groups with 3+ rows show a chevron and row count; click the heading itself. Both are CSS pseudo-elements, so nothing is injected into the React-managed heading node
+- **Without stealing focus**: the heading prevents the default `mousedown`, so clicking it never blurs the composer; folding is a pointer enhancement and focus stays in the composer
 - **`@` menu only**: identified through `[data-trigger-menu]` plus option-id prefixes, so the slash-command menu and model pickers are left alone
 
 Headings use 14px / 650 with a sticky background and a divider, separating them from the 13px rows. Fold state persists for the window.
@@ -131,7 +131,7 @@ Drop `dsh-at-plugins` from `dsh.profile.bundles` (the dependency line may stay),
 
 ## Language
 
-- **Plugin UI** follows the DSH language setting (Settings → General) and switches live: one `zh` and one `en` dictionary registered through `ctx.locale.register`. Section labels, button copy and empty states all follow.
+- **Plugin UI** follows the DSH language setting (Settings → General) and switches live: one `zh` and one `en` dictionary registered through `ctx.locale.register`. Section labels, fold hints and empty states all follow.
 - **This README** ships in Chinese and English; GitHub cannot auto-switch, so the link at the top is manual.
 
 ## How it works
@@ -140,11 +140,11 @@ Drop `dsh-at-plugins` from `dsh.profile.bundles` (the dependency line may stay),
 |---|---|
 | Plugin candidates | `inputTriggers.registerSource({ trigger: '@', ... })`; `meta.icon` wrapped as a 14px image component |
 | Session grouping | Wraps the `reference` source's `candidates()`; groups by `cwd` (not display name), rewrites `section` on `kind: 'session'` rows only, passes file rows through |
-| Header enhancement | `MutationObserver` plus `[data-trigger-menu]` + option-id prefix detection; wraps `.dshatp-label`, inserts `.dshatp-count` and `.dshatp-fold` |
+| Header enhancement | `MutationObserver` plus `[data-trigger-menu]` + option-id prefix detection; only sets `data-dshatp-count` / `foldable` / `folded`, with the chevron and count drawn by `::before` / `::after` |
 | Sticky | `position:sticky` on headings plus `scroll-margin-top` so `scrollIntoView` does not park a row under the heading |
 | Inline chip | Atomic `insert` + `codec` + a `conversation.user.text.node` renderer |
 
-Traps worth knowing, documented in the code: never read a section name with `textContent` (the fold button and count badge become part of the name and the fold state can never match); writing an unchanged `data` attribute re-triggers the `MutationObserver` and self-oscillates; the fold button and count must be restored synchronously, or they flicker on every keystroke; a sticky heading covers the `scrollIntoView` target unless you reserve `scroll-margin-top`.
+Traps worth knowing, documented in the code: never read a section name with `textContent` (pseudo-elements and extra nodes end up in it); writing an unchanged `data` attribute re-triggers the `MutationObserver` and self-oscillates; never inject children into a React-managed heading or move its text node — React removes them on re-render or `removeChild` fails, and the menu flickers while typing; a sticky heading covers the `scrollIntoView` target unless you reserve `scroll-margin-top`.
 
 ## Limits
 
@@ -152,9 +152,9 @@ Traps worth knowing, documented in the code: never read a section name with `tex
 - Read-only by design; manage plugins in Settings → Plugins.
 - Plugin inventory is cached for 5 seconds.
 - Folding is **visual**: hidden rows remain in the menu's data model. When an arrow key lands on a hidden row, the plugin walks in the same direction to the nearest visible row (through the menu's own hover path); Enter/Tab on a hidden row is still swallowed rather than picking something invisible.
-- The fold button itself is a pointer control (focus stays in the composer); keyboard users can arrow past a folded group, but cannot open or close it from the keyboard. If upstream ever exposes a data-level menu filter, this can become a real data fold.
+- Folding is a heading-click (pointer) enhancement; focus stays in the composer, so keyboard users can arrow past a folded group but cannot open or close it from the keyboard. If upstream ever exposes a data-level menu filter, this can become a real data fold.
 - Session grouping depends on upstream `ui-reference` row shape (`kind: 'session'` in `value`) and `sessions.list`'s `cwd`. If upstream changes, it degrades to the original layout instead of dropping candidates.
-- Menu enhancement relies on `[data-trigger-menu]`, `[role="listbox"]`, `[role="presentation"]` and the `dsh-slash-option-<source>-` id prefix; a structural overhaul can disable it — the symptom is "no sticky heading / no button", never a broken `@`.
+- Menu enhancement relies on `[data-trigger-menu]`, `[role="listbox"]`, `[role="presentation"]` and the `dsh-slash-option-<source>-` id prefix; a structural overhaul can disable it — the symptom is "no sticky heading / no fold chevron", never a broken `@`.
 - Plugin icons only accept `data:image/...;base64` in `meta.icon`; an invalid or failing image falls back to the built-in glyph.
 - Folder disambiguation tries up to three parent segments; extremely deep duplicate paths could still collide (they sort by final label and never drop rows).
 

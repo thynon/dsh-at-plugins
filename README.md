@@ -24,7 +24,7 @@
 
 装之后那张把「系统」组折起来了，正好能看到折叠后的效果。
 
-> 两张图摄于 0.1.1。0.1.2 把标题做成吸顶、加了行数徽标、把折叠箭头换成 CSS 画的 24px 按钮，分组本身没有变。
+> 两张图摄于 0.1.1。0.1.2 把标题做成吸顶、加了行数徽标，并用 CSS 伪元素画折叠箭头和计数；0.1.3 修掉了打字时菜单闪烁，视觉不变。
 
 ## 为什么
 
@@ -75,8 +75,8 @@ Minecraft
 
 - **吸顶**：列表滚动时当前分组标题停在菜单顶部，长列表里不会滚丢「我现在在哪一组」
 - **计数**：标题右侧显示这一组有几行（1 行的组不显示，避免噪音）；折叠后仍然看得到被收起了多少项
-- **折叠**：3 行以上出现 24px 的箭头按钮，点按钮或点标题本身都能折叠；箭头用 CSS 画，不依赖字体里的 `▾`／`▸`
-- **可访问性**：按钮带 `aria-expanded` 和「折叠/展开 + 组名」的 `aria-label`，有 `:focus-visible` 焦点环；标题和按钮都在 `mousedown` 阶段阻止默认行为，点它们不会让输入框失焦
+- **折叠**：3 行以上标题右侧出现箭头和行数，点标题本身就能折叠；箭头和计数都用 CSS 伪元素画，不往 React 管理的标题节点里插子节点
+- **不打断输入**：标题在 `mousedown` 阶段阻止默认行为，点它不会让输入框失焦；折叠是鼠标增强，菜单焦点始终留在输入框
 - **只改 `@` 菜单**：通过 `[data-trigger-menu]` 加 option id 前缀识别，斜杠命令菜单、模型选择器之类的 listbox 一概不碰
 
 标题字号 14px / 650，配吸顶背景和分隔线，跟 13px 的候选行拉开层次。折叠状态在窗口里一直保留。
@@ -132,7 +132,7 @@ cd ~/.dsh/profiles/desktop && pnpm install
 
 ## 语言
 
-- **插件界面**跟随 DSH 的语言设置（设置 → 常规），即时切换：字典 `zh` / `en` 各一份，走 `ctx.locale.register`。分组标题、按钮文案、空态提示都会跟着变。
+- **插件界面**跟随 DSH 的语言设置（设置 → 常规），即时切换：字典 `zh` / `en` 各一份，走 `ctx.locale.register`。分组标题、折叠提示、空态提示都会跟着变。
 - **README** 有中文和英文两份，GitHub 不支持按语言自动切换，只能在页首点过去。
 
 ## 实现要点
@@ -141,11 +141,11 @@ cd ~/.dsh/profiles/desktop && pnpm install
 |---|---|
 | 插件候选 | `inputTriggers.registerSource({ trigger: '@', ... })`，`meta.icon` 包成 14px 图片组件 |
 | 会话分组 | 拦 `reference` 来源的 `candidates()`，按 `cwd` 分组（不是按显示名），只重写 `kind: 'session'` 行的 `section`，文件行原样透传 |
-| 标题增强 | `MutationObserver` + `[data-trigger-menu]` 里 option id 前缀识别 `@` 菜单；给标题包 `.dshatp-label`、插 `.dshatp-count` 和 `.dshatp-fold` |
+| 标题增强 | `MutationObserver` + `[data-trigger-menu]` 里 option id 前缀识别 `@` 菜单；只写 `data-dshatp-count` / `foldable` / `folded` 属性，箭头和计数用 `::before` / `::after` 画 |
 | 吸顶 | 标题 `position:sticky` + `scroll-margin-top` 给 `scrollIntoView` 留出被标题盖住的高度 |
 | 行内 chip | 原子 `insert` + `codec` + `conversation.user.text.node` 渲染器 |
 
-几处踩过的坑，写在代码注释里：组名不能读 `textContent`（折叠按钮和计数徽标会被算进组名，状态永远对不上）；写相同值的 `data` 属性会再次触发 `MutationObserver`，容易自激；折叠按钮和计数要同步补，排到下一帧就会在打字时闪烁；吸顶标题会盖住 `scrollIntoView` 的目标，必须配 `scroll-margin-top`。
+几处踩过的坑，写在代码注释里：组名不能读 `textContent`（伪元素和额外节点会被算进去）；写相同值的 `data` 属性会再次触发 `MutationObserver`，容易自激；不要往 React 管理的标题节点里插子节点，也不要移动它的文本节点——React 重渲染时会删掉它们或 `removeChild` 失败，菜单就会在打字时闪烁；吸顶标题会盖住 `scrollIntoView` 的目标，必须配 `scroll-margin-top`。
 
 ## 边界与已知限制
 
@@ -153,9 +153,9 @@ cd ~/.dsh/profiles/desktop && pnpm install
 - 只读：不装、不卸、不改启停。要改去「设置 → 插件」。
 - 插件清单缓存 5 秒。
 - 折叠是**视觉**折叠：被折起来的行仍在菜单数据里。方向键落到看不见的行时，插件会沿同一方向把高亮挪到最近的可见行（借菜单自己的 hover 通道）；回车／Tab 落在看不见的行上会被拦掉，不会误插。
-- 折叠按钮本身是鼠标控件（菜单焦点始终留在输入框）；键盘用户可以用方向键跳过折叠组，但没法用键盘直接开合某一组。后续如果上游开放菜单数据层的过滤接口，可以改成真正的数据折叠。
+- 折叠是标题点击（鼠标）增强；菜单焦点始终留在输入框，键盘用户可以用方向键跳过折叠组，但没法用键盘直接开合某一组。后续如果上游开放菜单数据层的过滤接口，可以改成真正的数据折叠。
 - 会话分组依赖上游 `ui-reference` 的行结构（`value` 里的 `kind: 'session'`）与 `sessions.list` 的 `cwd`。上游改了，会退化成原样显示，不丢候选。
-- 菜单增强靠 `[data-trigger-menu]`、`[role="listbox"]`、`[role="presentation"]` 和 `dsh-slash-option-<source>-` 这组结构识别 `@` 菜单，不依赖内部哈希类名；但菜单结构大改时仍可能失效——失效表现为「标题不吸顶/没有按钮」，不影响 `@` 本身。
+- 菜单增强靠 `[data-trigger-menu]`、`[role="listbox"]`、`[role="presentation"]` 和 `dsh-slash-option-<source>-` 这组结构识别 `@` 菜单，不依赖内部哈希类名；但菜单结构大改时仍可能失效——失效表现为「标题不吸顶/没有折叠箭头」，不影响 `@` 本身。
 - 插件图标只认 `meta.icon` 里的 `data:image/...;base64`；格式不符或图片加载失败时退回内置图形。
 - 会话文件夹重名超过三级父目录仍可能撞名（极少见），此时按最后显示名排序，不会丢行。
 
@@ -165,7 +165,7 @@ cd ~/.dsh/profiles/desktop && pnpm install
 node check.mjs
 ```
 
-不开浏览器、不装 DSH，用一套极小的 React／DOM 替身把 `client.js` 和 `index.js` 真跑一遍：宿主提示词、插件来源与系统/用户判定、会话按文件夹归类与同名消歧、插件图标与长描述、空态/错误态、标题吸顶与计数、折叠按钮的点击回环、`@` 菜单识别不误伤斜杠菜单、`onPick` 的插入形态与 `codec`、chip 渲染。CI 在每次 push 时跑同一份。
+不开浏览器、不装 DSH，用一套极小的 React／DOM 替身把 `client.js` 和 `index.js` 真跑一遍：宿主提示词、插件来源与系统/用户判定、会话按文件夹归类与同名消歧、插件图标与长描述、空态/错误态、标题吸顶与计数、折叠点击回环、`@` 菜单识别不误伤斜杠菜单、`onPick` 的插入形态与 `codec`、chip 渲染。CI 在每次 push 时跑同一份。
 
 ## License
 
