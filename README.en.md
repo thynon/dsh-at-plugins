@@ -13,15 +13,16 @@ Typing `@` in DSH normally offers files and sessions only. This plugin turns **t
   <a href="https://github.com/thynon/dsh-at-plugins/actions/workflows/check.yml"><img alt="check" src="https://github.com/thynon/dsh-at-plugins/actions/workflows/check.yml/badge.svg"></a>
 </p>
 
-<!-- Screenshots placeholder: uncomment once before.png / after.png land
-
 ## Screenshots
+
+Both are real captures of the same `@` menu.
 
 | Before | After |
 |---|---|
-| ![before](docs/before.png) | ![after](docs/after.png) |
+| ![Before: the @ menu only offers files and sessions](docs/before.png) | ![After: two extra groups, System and User](docs/after.png) |
+| Only "Files & folders" and "Sessions" | Two extra groups, System and User; the System group is folded in this shot |
 
--->
+The "after" capture happens to have the System group folded, which shows the `▾` / `▸` control and what a folded group looks like.
 
 ## Why
 

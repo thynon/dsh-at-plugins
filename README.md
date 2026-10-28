@@ -13,15 +13,16 @@
   <a href="https://github.com/thynon/dsh-at-plugins/actions/workflows/check.yml"><img alt="check" src="https://github.com/thynon/dsh-at-plugins/actions/workflows/check.yml/badge.svg"></a>
 </p>
 
-<!-- 截图占位：收到 before.png / after.png 后取消下面这段注释
-
 ## 截图
+
+两张都是真机截图，同一个 `@` 菜单。
 
 | 装之前 | 装之后 |
 |---|---|
-| ![装之前](docs/before.png) | ![装之后](docs/after.png) |
+| ![装之前：@ 菜单只有文件与文件夹、对话](docs/before.png) | ![装之后：多了「系统」「用户」两组插件](docs/after.png) |
+| 只有「文件与文件夹」和「对话」 | 多了「系统」「用户」两组插件；这张里「系统」组是折叠状态 |
 
--->
+装之后那张把「系统」组折起来了，正好能看到标题右侧的 `▾`／`▸` 和折叠后的效果。
 
 ## 为什么
 
