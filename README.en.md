@@ -24,7 +24,7 @@ Both are real captures of the same `@` menu.
 
 The "after" capture happens to have the System group folded, which shows what a folded group looks like.
 
-> Both captures are from 0.1.1. 0.1.2 makes headers sticky, adds a row-count badge, and draws the chevron and count with CSS pseudo-elements; 0.1.3 removes the heading-node injection, and 0.1.4 keeps the menu open with a no-match row during IME composition. The visual design is unchanged.
+> Both captures are from 0.1.1. 0.1.2 makes headers sticky, adds a row-count badge, and draws the chevron and count with CSS pseudo-elements; 0.1.3 removes the heading-node injection; 0.1.4 keeps the menu open with a no-match row; 0.1.5 adds a query debounce and removes dynamic title attributes that could trigger native tooltips. The visual design is unchanged.
 
 ## Why
 
@@ -49,6 +49,8 @@ System plugins that shipped but are **not enabled** are omitted — `@`-ing them
 Data comes from the host's `pluginManager.listBundles`. Read-only: no install, no uninstall, no toggling.
 
 **No-match queries never return an empty list**: when no plugin matches, the source returns a "No matching plugins" row instead of `[]`. DSH closes the menu when every source is ready and empty; during IME composition (for example typing `chajian` before committing 插件) an intermediate query matches nothing, so returning empty closes the whole menu and the committed character reopens it — the menu appears to open and close. The placeholder is not pickable; press Esc to close.
+
+While you keep typing, the plugin source waits about 120ms before applying the new query; the menu keeps the previous candidates during that window, so IME composition and fast typing do not shrink the menu to one row and expand it on every keystroke. It updates once you pause.
 
 Plugin rows also get a small cleanup:
 
@@ -167,7 +169,7 @@ Traps worth knowing, documented in the code: never read a section name with `tex
 node check.mjs
 ```
 
-No browser, no DSH: a tiny React/DOM stand-in runs `client.js` and `index.js` for real — the host prompt, the plugin source and System/User split, folder bucketing with same-name disambiguation, plugin icons and long descriptions, empty/error/no-match placeholder states, sticky headings and counts, the fold click round-trip, `@`-menu detection without touching the slash menu, `onPick`'s insert shape and `codec`, and chip rendering. CI runs the same file on every push.
+No browser, no DSH: a tiny React/DOM stand-in runs `client.js` and `index.js` for real — the host prompt, the plugin source and System/User split, folder bucketing with same-name disambiguation, plugin icons and long descriptions, empty/error/no-match placeholder states, query debounce, sticky headings and counts, the fold click round-trip, `@`-menu detection without touching the slash menu, `onPick`'s insert shape and `codec`, and chip rendering. CI runs the same file on every push.
 
 ## License
 

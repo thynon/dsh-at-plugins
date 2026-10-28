@@ -336,6 +336,12 @@ ok('长描述不再按 42 字硬切', rows.some((row) => (row.description || '')
 
 const filtered = await src.candidates({ sessionId: 'current' }, { query: '侧边' })
 ok('查询过滤', filtered.length === 1 && filtered[0].name === '更好的侧边栏', JSON.stringify(filtered.map((r) => r.name)))
+const signal = { aborted: false, addEventListener() {}, removeEventListener() {} }
+const started = Date.now()
+const debounced = await src.candidates({ sessionId: 'current' }, { query: '侧边', signal })
+ok('查询有短暂防抖', Date.now() - started >= 100 && debounced.length === 1, String(Date.now() - started))
+const abortedSignal = { aborted: true, addEventListener() {}, removeEventListener() {} }
+ok('中止的查询直接返回空', (await src.candidates({ sessionId: 'current' }, { query: '侧边', signal: abortedSignal })).length === 0)
 const byPackage = await src.candidates({ sessionId: 'current' }, { query: 'dshmarket' })
 ok('按包名也能搜到', byPackage.length === 1 && byPackage[0].name === '插件市场', JSON.stringify(byPackage.map((r) => r.name)))
 const byJson = await src.candidates({ sessionId: 'current' }, { query: 'true' })
@@ -482,13 +488,11 @@ ok('2 行的组仍显示行数', titleSystem.dataset.dshatpCount === '2')
 ok('4 行的组显示行数', titleFiles.dataset.dshatpCount === '4')
 ok('单行组不显示计数', !titleOne.hasAttribute('data-dshatp-count'))
 ok('初始是展开的', fileRows.every((row) => row.style.display !== 'none'))
-ok('折叠提示是「折叠 文件」', titleFiles.title === '折叠 文件', titleFiles.title)
 
 fileRows[1].setAttribute('aria-selected', 'true')
 titleFiles.dispatch('click')
 ok('点一下：行折起来', fileRows.every((row) => row.style.display === 'none'))
 ok('点一下：标题进入折叠态', titleFiles.dataset.dshatpFolded === '1')
-ok('点一下：提示变成「展开 文件」', titleFiles.title === '展开 文件', titleFiles.title)
 ok('折叠后高亮自动挪到可见行', systemRows[0]._lastEvent !== undefined && systemRows[0]._lastEvent.type === 'mousemove')
 
 fileRows[1].removeAttribute('aria-selected')

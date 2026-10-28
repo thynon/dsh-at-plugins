@@ -215,6 +215,23 @@ window.__ModuleLoader__.load({
      * ① 插件候选：系统 / 用户
      * ================================================================== */
     const CACHE_MS = 5000
+    /* 连续打字时先让上一批候选留在菜单里，停手再过滤：
+       输入法组合/快速输入时菜单不会每次都缩成一行再撑开。 */
+    const QUERY_DEBOUNCE_MS = 120
+
+    function waitForDebounce(signal, ms) {
+      if (!signal || typeof signal.addEventListener !== 'function' || signal.aborted) return Promise.resolve()
+      return new Promise((resolve) => {
+        let timer = 0
+        const done = () => {
+          if (timer !== 0) clearTimeout(timer)
+          if (typeof signal.removeEventListener === 'function') signal.removeEventListener('abort', done)
+          resolve()
+        }
+        timer = setTimeout(done, ms)
+        signal.addEventListener('abort', done, { once: true })
+      })
+    }
 
     async function readBundles(ctx, cache, force) {
       const now = Date.now()
@@ -560,13 +577,7 @@ window.__ModuleLoader__.load({
           if (section.title.dataset.dshatpFolded !== flag) section.title.dataset.dshatpFolded = flag
           const foldableFlag = foldable ? '1' : '0'
           if (section.title.dataset.dshatpFoldable !== foldableFlag) section.title.dataset.dshatpFoldable = foldableFlag
-          const hint = foldable ? `${t(isFolded ? 'fold.expand' : 'fold.collapse')} ${label}` : ''
-          if (section.title.title !== hint) section.title.title = hint
           for (const row of section.rows) {
-            const description = [...row.children].find((child) => /itemDescription/.test(child.className || ''))
-            if (description !== undefined && description.textContent && description.getAttribute('title') !== description.textContent) {
-              description.setAttribute('title', description.textContent)
-            }
             if (isFolded) {
               if (row.style.display !== 'none') row.style.display = 'none'
             } else if (row.style.display === 'none') {
@@ -648,7 +659,6 @@ window.__ModuleLoader__.load({
             section.title.removeAttribute('data-dshatp-folded')
             section.title.removeAttribute('data-dshatp-foldable')
             delete section.title.dataset.dshatpCount
-            section.title.title = ''
             for (const row of section.rows) row.style.display = ''
           }
         }
@@ -794,6 +804,9 @@ window.__ModuleLoader__.load({
 
           async candidates(_session, request) {
             const query = request && request.query
+            const signal = request && request.signal
+            if (String(query || '').trim() !== '') await waitForDebounce(signal, QUERY_DEBOUNCE_MS)
+            if (signal && signal.aborted) return []
             try {
               const bundles = await readBundles(ctx, cache, false)
               const rows = toRows(ctx, bundles, t, query)
