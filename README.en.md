@@ -10,6 +10,7 @@ Typing `@` in DSH normally offers files and sessions only. This plugin turns **t
   <img alt="DeepSeek Harness" src="https://img.shields.io/badge/DSH-%E2%89%A50.2.1--rc.3-4C6EF5">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-green">
   <img alt="Node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
+  <a href="https://github.com/thynon/dsh-at-plugins/actions/workflows/check.yml"><img alt="check" src="https://github.com/thynon/dsh-at-plugins/actions/workflows/check.yml/badge.svg"></a>
 </p>
 
 <!-- Screenshots placeholder: uncomment once before.png / after.png land
