@@ -130,6 +130,7 @@ class FakeEl {
     }
     return null
   }
+  getBoundingClientRect() { return this._rect || { height: 0, width: 0, top: 0, left: 0, right: 0, bottom: 0 } }
   get textContent() { return this.childNodes.map((node) => node.textContent || '').join('') }
   set textContent(value) { this.childNodes = [{ nodeType: 3, textContent: String(value) }] }
 }
@@ -444,6 +445,8 @@ ok('提示词要求不要当文件/会话引用', prompts[0].text.includes('文�
 /* --- ⑥ 折叠按钮：点一下真的折，再点真的展开 --- */
 const menu = new FakeEl('div')
 menu.setAttribute('data-trigger-menu', '')
+menu._rect = { height: 400, width: 380, top: 100, left: 0, right: 380, bottom: 500 }
+menu.style.maxHeight = '400px'
 const list = new FakeEl('div')
 list.setAttribute('role', 'listbox')
 const titleFiles = new FakeEl('div')
@@ -481,6 +484,7 @@ globalThis.document = fakeDocument
 for (const observer of observers) observer.fire()
 
 ok('识别出 @ 菜单并打标记', menu.getAttribute('data-dshatp-mention') === '1')
+ok('菜单面板高度锁定在 400px', menu.style.minHeight === '400px', menu.style.minHeight)
 ok('标题不插任何子节点（防 React 重渲染闪烁）', titleFiles.childNodes.length === 1 && titleFiles.childNodes[0].nodeType === 3)
 ok('4 行的组可折叠', titleFiles.dataset.dshatpFoldable === '1')
 ok('2 行的组不给折叠', titleSystem.dataset.dshatpFoldable === '0')
@@ -527,6 +531,26 @@ ok('标题文本用 ellipsis 收尾', style !== undefined && style.textContent.i
 ok('计数由伪元素画', style !== undefined && style.textContent.includes('content:attr(data-dshatp-count)'))
 ok('箭头由伪元素画', style !== undefined && style.textContent.includes('[data-dshatp-foldable="1"]::before'))
 ok('滚动时为吸顶标题留空间', style !== undefined && style.textContent.includes('scroll-margin-top'))
+
+/* 无匹配占位：面板高度锁定，内容居中。 */
+const emptyMenu = new FakeEl('div')
+emptyMenu.setAttribute('data-trigger-menu', '')
+emptyMenu._rect = { height: 284, width: 380, top: 100, left: 0, right: 380, bottom: 384 }
+emptyMenu.style.maxHeight = '284px'
+const emptyList = new FakeEl('div')
+emptyList.setAttribute('role', 'listbox')
+const emptyRow = new FakeEl('button')
+emptyRow.setAttribute('role', 'option')
+emptyRow.setAttribute('id', 'dsh-slash-option-plugins-0')
+emptyRow.textContent = '没有匹配的插件继续输入，或按 Esc 关闭'
+emptyList.appendChild(emptyRow)
+emptyMenu.appendChild(emptyList)
+menus.push(emptyMenu)
+menuLists.push(emptyList)
+for (const observer of observers) observer.fire()
+ok('无匹配占位打上 empty 标记', emptyList.dataset.dshatpEmpty === '1')
+ok('无匹配面板高度也锁定', emptyMenu.style.minHeight === '284px', emptyMenu.style.minHeight)
+ok('无匹配内容居中', style.textContent.includes('flex:1 1 auto;justify-content:center'))
 
 /* 斜杠菜单不能被误伤：同样的 listbox 结构，但没有 reference/plugins 的 option id。 */
 const slashMenu = new FakeEl('div')

@@ -97,6 +97,8 @@ window.__ModuleLoader__.load({
   position:relative;top:auto}
 /* 吸顶标题会盖住滚动到上面的行；scrollIntoView 需要给标题留出高度。 */
 [data-dshatp-mention="1"] [role="option"]{scroll-margin-top:36px}
+/* 无匹配时只有一行占位：放在面板中间，别顶在空面板最上面。 */
+[data-dshatp-mention="1"] [role="listbox"][data-dshatp-empty="1"]{flex:1 1 auto;justify-content:center}
 .dshatp-plugin-icon{width:14px;height:14px;border-radius:3px;object-fit:contain;display:block}
 .dshatp-plugin-glyph{width:14px;height:14px;display:block;flex:none}
 .dshatp-chip{display:inline-flex;align-items:center;gap:4px;max-width:100%;padding:1px 6px;border-radius:6px;
@@ -445,6 +447,33 @@ window.__ModuleLoader__.load({
      * 里面出现 reference / plugins 来源的 option id 才算。
      * 斜杠菜单、模型选择器之类的 listbox 一律不动。
      */
+    const frozenMenus = new WeakSet()
+
+    /**
+     * 把菜单面板的高度锁在它第一次展示候选时的高度。
+     * 菜单是按内容撑高的；从 52 个候选过滤到 1 行「没有匹配」时，
+     * 面板会从 400px 猛缩到 42px，看起来就是整个弹窗在开合。
+     * 锁定后只在面板内部换内容，不改变面板高度。
+     */
+    function freezeMenuHeight(menu, list) {
+      if (frozenMenus.has(menu)) {
+        /* 窗口变小时 max-height 会重算；min-height 不能大过它，否则面板会顶出去。 */
+        const max = Number.parseFloat(menu.style.maxHeight)
+        const min = Number.parseFloat(menu.style.minHeight)
+        if (Number.isFinite(max) && max > 0 && min > max) menu.style.minHeight = `${Math.round(max)}px`
+        return
+      }
+      if (list.querySelector('[role="option"]') === null) return
+      const rect = typeof menu.getBoundingClientRect === 'function' ? menu.getBoundingClientRect() : null
+      const height = rect && rect.height > 0 ? rect.height : 0
+      if (height === 0) return
+      const max = Number.parseFloat(menu.style.maxHeight) || 400
+      const wanted = Math.min(Math.max(280, height), max)
+      if (!Number.isFinite(wanted) || wanted <= 0) return
+      menu.style.minHeight = `${Math.round(wanted)}px`
+      frozenMenus.add(menu)
+    }
+
     function menuListboxes() {
       const lists = []
       let menus
@@ -457,10 +486,15 @@ window.__ModuleLoader__.load({
         const list = menu.querySelector('[role="listbox"]')
         const mention = list !== null && list.querySelector('[id^="dsh-slash-option-reference-"], [id^="dsh-slash-option-plugins-"]') !== null
         if (!mention) {
-          if (menu.hasAttribute('data-dshatp-mention')) menu.removeAttribute('data-dshatp-mention')
+          if (menu.hasAttribute('data-dshatp-mention')) {
+            menu.removeAttribute('data-dshatp-mention')
+            menu.style.minHeight = ''
+            frozenMenus.delete(menu)
+          }
           continue
         }
         if (menu.getAttribute('data-dshatp-mention') !== '1') menu.setAttribute('data-dshatp-mention', '1')
+        freezeMenuHeight(menu, list)
         lists.push(list)
       }
       return lists
@@ -585,6 +619,19 @@ window.__ModuleLoader__.load({
             }
           }
         }
+        markEmptyState(list, t)
+      }
+    }
+
+    /** 无匹配/空插件时只有一行占位：标记 listbox，CSS 把那行放在面板中间。 */
+    function markEmptyState(list, t) {
+      const options = [...list.querySelectorAll('[role="option"]')]
+      const empty = options.length === 1
+        && (options[0].textContent.includes(t('empty.query.title')) || options[0].textContent.includes(t('empty.title')))
+      const value = empty ? '1' : ''
+      if (list.dataset.dshatpEmpty !== value) {
+        if (empty) list.dataset.dshatpEmpty = '1'
+        else delete list.dataset.dshatpEmpty
       }
     }
 
@@ -664,6 +711,9 @@ window.__ModuleLoader__.load({
         }
         for (const menu of document.querySelectorAll('[data-trigger-menu]')) {
           if (menu.hasAttribute('data-dshatp-mention')) menu.removeAttribute('data-dshatp-mention')
+          menu.style.minHeight = ''
+          const list = menu.querySelector('[role="listbox"]')
+          if (list !== null && list.dataset.dshatpEmpty !== undefined) delete list.dataset.dshatpEmpty
         }
       }
     }
