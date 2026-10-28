@@ -34,6 +34,8 @@ window.__ModuleLoader__.load({
       'fold.expand': '展开',
       'empty.title': '还没有可引用的插件',
       'empty.hint': '在「设置 → 插件」里装一个，再回来 @',
+      'empty.query.title': '没有匹配的插件',
+      'empty.query.hint': '继续输入，或按 Esc 关闭',
       'error.title': '读不到插件列表',
       'error.hint': '清单服务没响应，稍后再试',
     }
@@ -47,6 +49,8 @@ window.__ModuleLoader__.load({
       'fold.expand': 'Expand',
       'empty.title': 'No plugins to mention yet',
       'empty.hint': 'Install one in Settings → Plugins, then type @ again',
+      'empty.query.title': 'No matching plugins',
+      'empty.query.hint': 'Keep typing, or press Esc to close',
       'error.title': 'Plugin list unavailable',
       'error.hint': 'The inventory service did not answer; try again later',
     }
@@ -793,10 +797,18 @@ window.__ModuleLoader__.load({
             try {
               const bundles = await readBundles(ctx, cache, false)
               const rows = toRows(ctx, bundles, t, query)
-              if (rows.length === 0 && String(query || '').trim() === '') {
+              if (rows.length > 0) return rows
+              if (String(query || '').trim() === '') {
                 return [{ name: t('empty.title'), description: t('empty.hint'), icon: PluginGlyph }]
               }
-              return rows
+              /*
+               * 无匹配时也返回一行占位，而不是 []：
+               * 菜单的规则是「所有来源都 ready 且为空就自动关闭」。
+               * 输入法组合期间（比如打 chajian 还没上屏「插件」）会先出现
+               * 一个匹配不到任何东西的查询，返回 [] 会让整个菜单关掉，
+               * 上屏后再重新打开——看起来就是菜单在开合。
+               */
+              return [{ name: t('empty.query.title'), description: t('empty.query.hint'), icon: PluginGlyph }]
             } catch (error) {
               console.warn('[dsh-at-plugins] plugin list unavailable:', error && error.message ? error.message : error)
               return [{ name: t('error.title'), description: t('error.hint'), icon: WarningGlyph }]

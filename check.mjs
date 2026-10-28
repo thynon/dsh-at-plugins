@@ -224,6 +224,8 @@ const DICT = {
   'fold.expand': '展开',
   'empty.title': '还没有可引用的插件',
   'empty.hint': '在「设置 → 插件」里装一个，再回来 @',
+  'empty.query.title': '没有匹配的插件',
+  'empty.query.hint': '继续输入，或按 Esc 关闭',
   'error.title': '读不到',
   'error.hint': '再试',
 }
@@ -337,7 +339,9 @@ ok('查询过滤', filtered.length === 1 && filtered[0].name === '更好的侧�
 const byPackage = await src.candidates({ sessionId: 'current' }, { query: 'dshmarket' })
 ok('按包名也能搜到', byPackage.length === 1 && byPackage[0].name === '插件市场', JSON.stringify(byPackage.map((r) => r.name)))
 const byJson = await src.candidates({ sessionId: 'current' }, { query: 'true' })
-ok('搜索不把 value 里的 JSON 当正文', byJson.length === 0, JSON.stringify(byJson.map((r) => r.name)))
+ok('搜索不把 value 里的 JSON 当正文', byJson.length === 1 && byJson[0].name === '没有匹配的插件', JSON.stringify(byJson.map((r) => r.name)))
+ok('无匹配时保留占位行，菜单不自动关', byJson.length === 1 && byJson[0].value === undefined)
+ok('占位行不可插入', src.onPick({ candidate: byJson[0] }) === undefined)
 const disabled = await src.candidates({ sessionId: 'current' }, { query: '未启用' })
 ok('按状态也能搜到未启用', disabled.length === 2 && disabled.every((r) => r.description.includes('未启用')), JSON.stringify(disabled.map((r) => r.name)))
 

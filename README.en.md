@@ -24,7 +24,7 @@ Both are real captures of the same `@` menu.
 
 The "after" capture happens to have the System group folded, which shows what a folded group looks like.
 
-> Both captures are from 0.1.1. 0.1.2 makes headers sticky, adds a row-count badge, and draws the chevron and count with CSS pseudo-elements; 0.1.3 fixes the menu flicker while typing without changing the look.
+> Both captures are from 0.1.1. 0.1.2 makes headers sticky, adds a row-count badge, and draws the chevron and count with CSS pseudo-elements; 0.1.3 removes the heading-node injection, and 0.1.4 keeps the menu open with a no-match row during IME composition. The visual design is unchanged.
 
 ## Why
 
@@ -47,6 +47,8 @@ System first, User second; enabled entries first within a group, disabled ones c
 System plugins that shipped but are **not enabled** are omitted — `@`-ing them would do nothing.
 
 Data comes from the host's `pluginManager.listBundles`. Read-only: no install, no uninstall, no toggling.
+
+**No-match queries never return an empty list**: when no plugin matches, the source returns a "No matching plugins" row instead of `[]`. DSH closes the menu when every source is ready and empty; during IME composition (for example typing `chajian` before committing 插件) an intermediate query matches nothing, so returning empty closes the whole menu and the committed character reopens it — the menu appears to open and close. The placeholder is not pickable; press Esc to close.
 
 Plugin rows also get a small cleanup:
 
@@ -150,6 +152,7 @@ Traps worth knowing, documented in the code: never read a section name with `tex
 
 - Only **running** packages are listed (`installed` or `enabled`); official optional packages that are not installed, shipped-but-disabled system plugins, and plain non-bundle profile dependencies are all omitted.
 - Read-only by design; manage plugins in Settings → Plugins.
+- A no-match query keeps the menu open with a "No matching plugins" row; press Esc or delete the `@` to close it.
 - Plugin inventory is cached for 5 seconds.
 - Folding is **visual**: hidden rows remain in the menu's data model. When an arrow key lands on a hidden row, the plugin walks in the same direction to the nearest visible row (through the menu's own hover path); Enter/Tab on a hidden row is still swallowed rather than picking something invisible.
 - Folding is a heading-click (pointer) enhancement; focus stays in the composer, so keyboard users can arrow past a folded group but cannot open or close it from the keyboard. If upstream ever exposes a data-level menu filter, this can become a real data fold.
@@ -164,7 +167,7 @@ Traps worth knowing, documented in the code: never read a section name with `tex
 node check.mjs
 ```
 
-No browser, no DSH: a tiny React/DOM stand-in runs `client.js` and `index.js` for real — the host prompt, the plugin source and System/User split, folder bucketing with same-name disambiguation, plugin icons and long descriptions, empty/error states, sticky headings and counts, the fold click round-trip, `@`-menu detection without touching the slash menu, `onPick`'s insert shape and `codec`, and chip rendering. CI runs the same file on every push.
+No browser, no DSH: a tiny React/DOM stand-in runs `client.js` and `index.js` for real — the host prompt, the plugin source and System/User split, folder bucketing with same-name disambiguation, plugin icons and long descriptions, empty/error/no-match placeholder states, sticky headings and counts, the fold click round-trip, `@`-menu detection without touching the slash menu, `onPick`'s insert shape and `codec`, and chip rendering. CI runs the same file on every push.
 
 ## License
 
