@@ -66,7 +66,7 @@ class FakeEl {
   get children() { return this.childNodes.filter((node) => node.nodeType === 1) }
   get firstChild() { return this.childNodes[0] || null }
   getAttribute(name) { return this.attrs.has(name) ? this.attrs.get(name) : null }
-  setAttribute(name, value) { this.attrs.set(name, String(value)) }
+  setAttribute(name, value) { globalThis.__attrWrites = (globalThis.__attrWrites || 0) + 1; this.attrs.set(name, String(value)) }
   removeAttribute(name) { this.attrs.delete(name) }
   hasAttribute(name) { return this.attrs.has(name) }
   appendChild(node) { this.childNodes.push(node); node.parentNode = this; return node }
@@ -337,8 +337,10 @@ const filtered = await src.candidates({ sessionId: 'current' }, { query: '侧边
 ok('查询过滤', filtered.length === 1 && filtered[0].name === '更好的侧边栏', JSON.stringify(filtered.map((r) => r.name)))
 const signal = { aborted: false, addEventListener() {}, removeEventListener() {} }
 const started = Date.now()
-const debounced = await src.candidates({ sessionId: 'current' }, { query: '侧边', signal })
-ok('查询有短暂防抖', Date.now() - started >= 100 && debounced.length === 1, String(Date.now() - started))
+const immediate = await src.candidates({ sessionId: 'current' }, { query: '侧边', signal })
+const elapsed = Date.now() - started
+/* 不能再有防抖：文件/会话来源是即时的，插件组晚一拍就会看起来「闪一下」 */
+ok('查询即时返回，不再等防抖', elapsed < 60 && immediate.length === 1, `${elapsed}ms`)
 const abortedSignal = { aborted: true, addEventListener() {}, removeEventListener() {} }
 ok('中止的查询直接返回空', (await src.candidates({ sessionId: 'current' }, { query: '侧边', signal: abortedSignal })).length === 0)
 const byPackage = await src.candidates({ sessionId: 'current' }, { query: 'dshmarket' })
@@ -482,6 +484,11 @@ for (const observer of observers) observer.fire()
 
 ok('识别出 @ 菜单并打标记', menu.getAttribute('data-dshatp-mention') === '1')
 ok('菜单面板高度锁定在 400px', menu.style.minHeight === '400px', menu.style.minHeight)
+
+/* 同一份 DOM 再跑一轮：结构指纹没变，就一个属性都不该写（这是打字时不闪的关键） */
+const writesBefore = globalThis.__attrWrites || 0
+for (const observer of observers) observer.fire()
+ok('结构没变时第二轮不写 DOM', (globalThis.__attrWrites || 0) === writesBefore, `${writesBefore} -> ${globalThis.__attrWrites}`)
 ok('标题不插任何子节点（防 React 重渲染闪烁）', titleFiles.childNodes.length === 1 && titleFiles.childNodes[0].nodeType === 3)
 ok('4 行的组可折叠', titleFiles.dataset.dshatpFoldable === '1')
 ok('2 行的组不给折叠', titleSystem.dataset.dshatpFoldable === '0')

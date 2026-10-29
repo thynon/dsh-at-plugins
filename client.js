@@ -213,23 +213,6 @@ window.__ModuleLoader__.load({
      * ① 插件候选：系统 / 用户
      * ================================================================== */
     const CACHE_MS = 5000
-    /* 连续打字时先让上一批候选留在菜单里，停手再过滤：
-       输入法组合/快速输入时菜单不会每次都缩成一行再撑开。 */
-    const QUERY_DEBOUNCE_MS = 120
-
-    function waitForDebounce(signal, ms) {
-      if (!signal || typeof signal.addEventListener !== 'function' || signal.aborted) return Promise.resolve()
-      return new Promise((resolve) => {
-        let timer = 0
-        const done = () => {
-          if (timer !== 0) clearTimeout(timer)
-          if (typeof signal.removeEventListener === 'function') signal.removeEventListener('abort', done)
-          resolve()
-        }
-        timer = setTimeout(done, ms)
-        signal.addEventListener('abort', done, { once: true })
-      })
-    }
 
     async function readBundles(ctx, cache, force) {
       const now = Date.now()
@@ -582,6 +565,13 @@ window.__ModuleLoader__.load({
       }
     }
 
+    /*
+     * 每次重渲染都写一遍 DOM 是闪烁的根源之一：写相同的值也会触发样式重算，
+     * 而 React 重建标题节点后我们又必须补写。折中办法是记一份「结构指纹」——
+     * 标题节点身份 + 分组名 + 行数 + 折叠状态。指纹没变就一个字节都不写。
+     */
+    const passCache = new WeakMap()
+
     function applyFolds(t) {
       let lists
       try {
@@ -590,7 +580,20 @@ window.__ModuleLoader__.load({
         return
       }
       for (const list of lists) {
-        for (const section of collectSections(list)) {
+        const sections = collectSections(list)
+        const titles = sections.map((section) => section.title)
+        const signature = sections
+          .map((section) => `${section.label}\u0001${section.rows.length}\u0001${folded.has(section.label) ? '1' : '0'}`)
+          .join('\u0002')
+        const cached = passCache.get(list)
+        if (cached !== undefined
+          && cached.signature === signature
+          && cached.titles.length === titles.length
+          && cached.titles.every((title, index) => title === titles[index])) {
+          continue
+        }
+        passCache.set(list, { signature, titles })
+        for (const section of sections) {
           ensureTitleClick(section.title, t)
           const label = sectionLabel(section.title)
           if (label === '') continue
@@ -849,9 +852,7 @@ window.__ModuleLoader__.load({
 
           async candidates(_session, request) {
             const query = request && request.query
-            const signal = request && request.signal
-            if (String(query || '').trim() !== '') await waitForDebounce(signal, QUERY_DEBOUNCE_MS)
-            if (signal && signal.aborted) return []
+            if (request && request.signal && request.signal.aborted) return []
             try {
               const bundles = await readBundles(ctx, cache, false)
               const rows = toRows(ctx, bundles, t, query)
