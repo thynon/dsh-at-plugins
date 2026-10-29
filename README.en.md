@@ -24,7 +24,7 @@ Both are real captures of the same `@` menu.
 
 The "after" capture happens to have the System group folded, which shows what a folded group looks like.
 
-> Both captures are from 0.1.1. 0.1.2 makes headers sticky, adds a row-count badge, and draws the chevron and count with CSS pseudo-elements; 0.1.3 removes the heading-node injection; 0.1.4 keeps the menu open with a no-match row; 0.1.5 adds a query debounce and removes dynamic title attributes that could trigger native tooltips; 0.1.6 locks the menu panel height so filtering down to one row no longer collapses the whole popup; 0.1.7 removes the "No matching plugins" placeholder and lets DSH close the menu as usual. The visual design is unchanged.
+> Both captures are from 0.1.1. 0.1.2 makes headers sticky, adds a row-count badge, and draws the chevron and count with CSS pseudo-elements; 0.1.3 removes the heading-node injection; 0.1.4 keeps the menu open with a no-match row; 0.1.5 adds a query debounce and removes dynamic title attributes that could trigger native tooltips; 0.1.6 locks the menu panel height so filtering down to one row no longer collapses the whole popup; 0.1.7 removes the "No matching plugins" placeholder and lets DSH close the menu as usual; 0.1.8 removes the 120ms query debounce so the plugin source and the file/session source settle in the same tick, and adds a structure fingerprint to skip no-op DOM writes. The visual design is unchanged.
 
 ## Why
 
@@ -50,7 +50,7 @@ Data comes from the host's `pluginManager.listBundles`. Read-only: no install, n
 
 **No placeholder on a no-match query**: when no plugin matches, the source returns empty and DSH closes the menu as usual — no "No matching plugins" row. The panel-height lock only applies while the menu is open: filtering from 52 results down to 3 does not shrink the panel, while a no-match query closes it cleanly instead of collapsing it into a tiny popup.
 
-While you keep typing, the plugin source waits about 120ms before applying the new query; the menu keeps the previous candidates during that window, so IME composition and fast typing do not shrink the menu on every keystroke. It updates or closes once you pause.
+Queries are no longer delayed: the plugin source settles in the same tick as the file/session source, so one keystroke does not trigger two menu repaints (one for files/sessions, another 120ms later for plugins). The menu enhancement also keeps a structure fingerprint — heading node + group name + row count + fold state — and writes nothing when it has not changed, cutting style recalculation while typing.
 
 The menu panel also locks its height when it first shows candidates (within the available space): filtering from 52 results down to 3 only changes the content inside; the panel does not collapse.
 
@@ -171,7 +171,7 @@ Traps worth knowing, documented in the code: never read a section name with `tex
 node check.mjs
 ```
 
-No browser, no DSH: a tiny React/DOM stand-in runs `client.js` and `index.js` for real — the host prompt, the plugin source and System/User split, folder bucketing with same-name disambiguation, plugin icons and long descriptions, empty/error states, query debounce, panel height locking, sticky headings and counts, the fold click round-trip, `@`-menu detection without touching the slash menu, `onPick`'s insert shape and `codec`, and chip rendering. CI runs the same file on every push.
+No browser, no DSH: a tiny React/DOM stand-in runs `client.js` and `index.js` for real — the host prompt, the plugin source and System/User split, folder bucketing with same-name disambiguation, plugin icons and long descriptions, empty/error states, same-tick settlement and the structure fingerprint, panel height locking, sticky headings and counts, the fold click round-trip, `@`-menu detection without touching the slash menu, `onPick`'s insert shape and `codec`, and chip rendering. CI runs the same file on every push.
 
 ## License
 
